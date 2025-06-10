@@ -8,7 +8,7 @@ BRIDGE is a user-friendly app that enables scientists to **explore, analyze and 
 
 In order to download and start using bridge there are some previous steps to be done, like setting the environment and creating the database.
 
-### Setting the environment
+### Setting up the environment
     
 First, the user has to clone the git repository to the local machine.
 
