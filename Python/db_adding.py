@@ -78,7 +78,7 @@ def main():
         return
 
     # === Step 5: Connect to SQLite ===
-    db_path = "db_v1_app.db" # You can just place an empty db file and it will fill it from scratch / We can also ask the user to provide the name of this file
+    db_path = input("\nEnter path to the database: ").strip() # You can just place an empty db file and it will fill it from scratch / We can also ask the user to provide the name of this file
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
