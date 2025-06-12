@@ -64,7 +64,7 @@ As said before, the code has been heavily modularized to ease the editing, debug
 This also allows the user to furhter locally customize the app with more pipelines or plots without the need of understanding and editing the whole code 
 but rather just changing the corresponding files.
 
-Here is a diagram showing all the different code files and their hierarchy. Moreover, you can also see which functions are declared in which files.
+Here is a diagram showing all the different code files and their hierarchy. Moreover, you can also see which functions are declared in which files and a brief description of what is inside each file.
 Following this diagram, the user should find in a fairly easy manner the part of the code they are interested in.
 
-![Code Hierarchy Diagram](./data/CODE_DIAGRAM_PDF.pdf)
+![Code Hierarchy Diagram](./data/CODE_DIAGRAM_FINAL.png)
