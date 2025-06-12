@@ -1,0 +1,97 @@
+<h2>Processed Integration</h2>
+
+<p>
+The <strong>Processed Integration</strong> section provides tools for comparing and integrating multiple omics datasets (Proteomics, Phosphoproteomics and RNA-seq) after statistical filtering. 
+It focuses on identifying features that show coordinated changes across data layers, such as genes and proteins that are jointly regulated.
+</p>
+
+<h3>Purpose</h3>
+<p>
+This section is designed for exploring biologically meaningful overlaps between omics datasets.
+By focusing on significantly changing features, it enables you to discover consistent trends, validate multi-level regulation, and generate integrative insights.
+</p>
+
+<h3>How It Works</h3>
+<p>
+This pipeline is more complex than the raw integration pipeline. These are the steps to achieve the processed integration:
+</p>
+<ul>
+    <li>
+        Choose which tables to integrate.
+    </li>
+
+    <li>
+        Choose, for each table, upon which contrast to filter the significant genes.
+    </li>
+
+    <li>
+        Choose both the P-value and LFC threshold to filter the data and the <code>k</code>, which represents the number of clusters you want in the plot.
+    </li>
+</ul>
+<p>
+Once all of this is selected, the following will happen, assume you integrate <em>n</em> tables:
+</p>
+<ul>
+    <li>
+        For each table, filter upon the selected contrast and thresholds and get a list with the significant genes, resulting in <em>n</em> lists.
+    </li>
+
+    <li>
+        Intersect all the list of the significant genes to get a list with the genes that are significant across all the integrated datasets.
+    </li>
+
+    <li>
+        Use the list of intersected significant genes to subset the integrated datasets. After this, you will have <em>n</em> resulting tables, all with the same genes. 
+    </li>
+</ul>
+
+<p>
+After integration, similar to the <em>Raw Integration</em>, a preview will be rendered for you to check how the process went. This preview will show you the dimensions of all the integrated tables
+before filtering, after filtering, and after filtering and intersection. Ideally and if there are no duplicates in any integrated dataset, the final subsets will have the same number of rows.
+Along with this, also the contrast for which the filtering was done will be shown for cheking purposes.
+Finally, the <em>elbow method</em> will be computed on the final subset to obtain the optimal <code>k</code>, that is, the optimal number of clusters for that particular data. This optimal number of
+clusters will be shown in the preview for the user to know and act accordingly.
+</p>
+
+<h3>Available plots and tables</h3>
+<ul>
+    <li>
+    <strong>Tables</strong>
+    Here you will have the resulting tables after integration, as explained before, the genes present in all the tables must be the same.
+    </li>
+
+    <li>
+    <strong>Integrated Heatmaps</strong><br>
+    Here you will see as many heatmaps as omics tables integrated. These heatmaps are clustered using the number of clusters <code>k</code> specified in the settings. 
+    For each cluster, a corresponding trend plot displays the average expression profile, allowing you to visualize the dynamic behavior of each group.
+
+    The key feature of this set of plots is that clustering is performed only on the first dataset using k-means. 
+    The resulting cluster assignments are then applied to all other datasets. This means that the same set of genes will appear in the same cluster across all heatmaps.
+
+    Thanks to this synchronized clustering and the accompanying trend plots, you can easily observe whether the expression trends are consistent across omics layers.
+    For example, a gene cluster that shows upregulation in a given dataset can be checked for similar patterns in other datasets. 
+    This provides insight into how different layers of regulation align, diverge, or reinforce each other across the integrated omics datasets.
+    </li>
+
+    <li>
+    <strong>Heatmap Tables</strong>
+    Below the heatmaps you can find tables that show to which cluster is each gene align. The function of this tables is mainly to check that the same cluster has been applied to the same gene
+    and which genes have been clustered together.
+    </li>
+
+    <li>
+    <strong>LFC Scatterplot</strong><br>
+    Apart from the trend-clustered heatmaps, there is also a scatterplot that compares the Log Fold Changes (LFCs) of the genes across the different datasets. 
+    Each point in the plot represents a gene that is present in both datasets, with its LFC in one dataset plotted on the x-axis and
+    the corresponding LFC in the other dataset on the y-axis. 
+
+    This visualization allows you to assess the correlation and agreement between layers. For example, whether upregulated genes in one omics technique are also upregulated in another omics technique. 
+    Deviations from the diagonal line indicate discrepancies between datasets.
+    </li>
+
+</ul>
+
+<div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px; margin: 10px 0;">
+    All parts in the <em>Processed integration</em> work with two or more tables except the scatterplot, that requires a 2D integration and will only be rendered if the integration is done with two tables.
+    For same reason, it will not be rendered if one of the integrated tables is a phosphoproteomics table (1 gene - n peptides). This plot only works if we follow a 1:1 matching.
+</div>

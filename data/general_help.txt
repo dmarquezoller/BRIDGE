@@ -1,0 +1,30 @@
+<h1>Welcome to BRIDGE</h1>
+<p>This page provides instructions on how to use the application effectively.</p>
+
+<h2>Overview</h2>
+<p>
+BRIDGE is an interactive application designed to explore and analyze multi-omics datasets efficiently.
+The accepted types of data are Proteomics, Phosphoproteomics and RNA-seq.
+It is structured into two main sections: <strong>Individual Exploration</strong> and <strong>Integration</strong>.
+Each section offers tailored tools to visualize and interpret your data at different levels.
+</p>
+
+<h2>Sections</h2>
+<ul>
+  <li><strong>Individual Exploration:</strong> This section allows you to explore and analyze omics datasets individually
+  (e.g., proteomics, phosphoproteomics and RNA-seq) through a set of different visualisations and tools.</li>
+  <li><strong>Integration:</strong> This section focuses on combining multiple omics datasets to reveal shared patterns,
+  correlations, and integrative insights across data types, achieving this also with different plots and analyses.</li>
+</ul>
+
+<h2>Data Selection</h2>
+<p>
+Before beginning your analysis, you must import the data. The <strong>Data Selection</strong> panel
+serves as the connection to the underlying database. 
+Your selections will determine the content available in both the Individual and Integration sections.
+</p>
+
+<p>
+Once a dataset is selected, relevant visualizations and analysis tools will become available in the corresponding sections.
+Make sure your database has been properly generated and contains the required metadata for optimal functionality.
+</p>

@@ -18,6 +18,11 @@ integration_ui <- function(input, output, session, rv) {
                     fluidRow(
                         box(
                         title = "Integrate", width = 4, solidHeader = TRUE, status = "primary",
+                        tags$div(style = "height:8px;"),
+                        div(style = "text-align: center;",    
+                            actionBttn("raw_int_help", "Help", color = "primary" ,icon=icon("question-circle"), size="sm", style = "bordered")
+                        ),
+                        tags$div(style = "height:8px;"),
                         pickerInput(inputId = "integration", label = "Integrate", choices = rv$table_names, multiple = TRUE, options = pickerOptions(container = "body"), width = "100%"),
                         uiOutput("integration_col_selector"),
                         div(style = "text-align: center;",
@@ -55,6 +60,11 @@ integration_ui <- function(input, output, session, rv) {
                     fluidRow(
                         box(
                             title = "Process Integrate", width = 4, solidHeader = TRUE, status = "primary",
+                            tags$div(style = "height:8px;"),
+                            div(style = "text-align: center;",
+                                actionBttn("processed_int_help", "Help", color = "primary" ,icon=icon("question-circle"), size="sm", style = "bordered")
+                            ),
+                            tags$div(style = "height:8px;"),
                             pickerInput(
                                 inputId = "processed_integration", label = "Integrate", 
                                 choices = rv$table_names, multiple = TRUE, 
@@ -124,6 +134,7 @@ integration_ui <- function(input, output, session, rv) {
 
     output$preview_box_integrate <- renderUI({
       req(rv$integration_preview_dims)
+      req(rv$optimal_k)
 
       dims_ui <- lapply(names(rv$integration_preview_dims), function(tbl) {
         dims <- rv$integration_preview_dims[[tbl]]
@@ -149,6 +160,10 @@ integration_ui <- function(input, output, session, rv) {
                 comp <- input[[paste0("pi_comparison_selected_", tbl)]]
                 tags$li(paste(tbl, ":", comp))
               })
+            ),
+            tags$li(tags$b("Optimal k following the elbow rule:")),
+            tags$ul(
+              tags$li(paste("The optimal k is: ", rv$optimal_k))
             )
           )
         )

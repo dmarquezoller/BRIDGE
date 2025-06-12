@@ -23,6 +23,7 @@ library(org.Mm.eg.db)
 library(enrichplot)
 library(circlize)
 library(shinycssloaders)
+library(NbClust)
 
 source("R/modules/helpers/db_helpers.R")
 source("R/modules/helpers/dep2_helpers.R")

@@ -7,7 +7,11 @@ data_ui <- function(id) {
 
 data_ui_object <- box(
         title = "Data Selection", width = 12, status = "success", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-        tags$div(style = "height:10px;"),
+        tags$div(style = "height:8px;"),
+        div(style = "text-align: center;",
+            actionBttn("data_help", "Help", color = "success" ,icon=icon("question-circle"), size="sm", style = "bordered")
+        ),
+        tags$div(style = "height:8px;"),
         helpText("Select Species, Table and the desired columns to load the data "),
         tags$div(style = "height:10px;"),
         selectInput("species", "Select Species", choices = c("Zebrafish"), multiple = T),

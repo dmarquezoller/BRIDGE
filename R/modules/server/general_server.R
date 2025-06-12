@@ -194,12 +194,10 @@ server_function <- function(input, output, session, db_path){
           box(title="Table", width = 12, solidHeader = T, status = "primary", style= "overflow-x: auto", collapsible = T, collapsed = F,
               h3(),
               DTOutput(paste0("table_", tbl_name)),
-              h3(),
-              downloadBttn("downloadT1", "Download Zebrafish_RNAseq_2", size="xs",  color = "primary")
-              
+              h3()              
           ),
           tabBox(
-            title = "plots", width = 12,
+            title = actionBttn("individual_help", "Help", color = "primary" ,icon=icon("question-circle"), size="sm", style = "bordered"), width = 12,
             id = "plotTabs", selected = "Raw Heatmap",
             tabPanel("Raw Heatmap", 
                      fluidRow(
@@ -312,5 +310,9 @@ server_function <- function(input, output, session, db_path){
 ############################
 
  integration_ui(input, output, session, rv)
+
+###########################
+
+ help_buttons(input, output, session)
 
 }

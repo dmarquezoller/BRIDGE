@@ -87,6 +87,7 @@ processed_integration <- function(input, output, session, rv){
         # Update dimension info
         for (tbl in selected_tables) {
             dim_info[[tbl]]$intersected <- dim(intersected_list[[tbl]])
+            data_for_elbow <- intersected_list[[tbl]]
         }
 
         # Save results
@@ -98,6 +99,9 @@ processed_integration <- function(input, output, session, rv){
             intersected = dim_info[[tbl]]$intersected
             )
         })
+        elbow <- NbClust(data_for_elbow, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
+        optimal_k <- as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
+        rv$optimal_k <- optimal_k
         names(rv$integration_preview_dims) <- selected_tables
     })
 }

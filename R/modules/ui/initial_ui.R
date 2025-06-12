@@ -5,7 +5,7 @@ ui <- dashboardPage(
   dashboardHeader(title = "BRIDGE"),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Raw Data Tables", tabName = "raw_data", icon = icon("table")),
+      menuItem("Individual Exploration", tabName = "raw_data", icon = icon("table")),
       menuItem("Integration", tabName = "Integration", icon = icon("th")),
       actionBttn("general_help", "Help", icon=icon("question-circle"), size="sm", style = "bordered")
     )

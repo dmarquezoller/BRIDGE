@@ -1,0 +1,44 @@
+<h2>Raw Integration</h2>
+
+<p>
+The <strong>Raw Integration</strong> section enables direct side-by-side comparison of raw data from multiple omics layers (Proteomics, Phosphoproteomics or RNA-seq). 
+This view is designed to help you explore how individual features behave across data types and detect coordinated or discordant expression patterns.
+</p>
+
+<h3>Purpose</h3>
+<p>
+Raw integration is useful for verifying the consistency of signals across omics layers before applying any statistical or transformation-based analyses. 
+It is ideal for hypothesis generation, sanity checks, and visual inspection of shared features such as genes or proteins.
+</p>
+
+<h3>How It Works</h3>
+<p>
+There is a number of inputs to be filled for a correct integration.
+First, you have to select which tabes you want to integrate (2 or more).
+After that, for each integrated table you are required to choose which columns to integrate. This is for two reasons: To allow exploration of subsets of the parent data
+and also because for a correct integration, the integrated datasets require the same number of columns, and ideally, matching timepoints.
+</p>
+<p>
+Once you selected the tables and columns to integrate, you will see a <strong>preview</strong> box that will let you check the column matching so you can see if you 
+are joining matching timepoints or not.
+</p>
+
+<h3>Available plots and tables</h3>
+<ul>
+    <li>
+    <strong>Integrated Raw Table</strong>
+    In here you can see and download the integration of the selected tables along with a new column called source that specifies the parent table to which each row belongs.
+    </li>
+
+    <li>
+    <strong>Integrated Timeline Plot</strong>
+    Similar to the <em>Gene Expression</em> in <em>Individual Exploration</em>, you can search for one or more desired genes (also connected to the database so the browser will autocomplete)
+    and see their expression over the time points. However, now with only one search you can see the results for all the integrated tables at the same time side by side.
+    Like in the <em>Individual Exploration</em>, you can also choose between different transforms for your integrated data.
+    </li>
+</ul>
+
+<div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px; margin: 10px 0;">
+	For the integration of phosphoproteomics and proteomics/RNA-seq of course the identifier is different, and if you search for a given gene, the proteomics and RNA-seq plots 
+    will show only one line (if there are no repetitions) while for phosphoproteomics there will appear one line per peptide belonging to that gene.
+</div>
