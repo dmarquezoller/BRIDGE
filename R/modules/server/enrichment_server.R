@@ -34,10 +34,11 @@ enrichment_server <- function(input, output, session, rv) {
                 output[[paste0("enrichment_", tbl_name)]] <- renderUI({
                     plotOutput(paste0("enrichment_plot_", tbl_name))
                 })
+                output[[paste0("enrichment_plot_", tbl_name)]] <- renderPlot({
+                    enrichplot::dotplot(res_ora)
             })
-            output[[paste0("enrichment_plot_", tbl_name)]] <- renderPlotly({
-                enrichplot::dotplot(res_ora)
             })
+
         })
     )
 }
