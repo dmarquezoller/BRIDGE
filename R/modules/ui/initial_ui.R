@@ -7,7 +7,7 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Raw Data Tables", tabName = "raw_data", icon = icon("table")),
       menuItem("Integration", tabName = "Integration", icon = icon("th")),
-      actionBttn("help", "Help", icon=icon("question-circle"), size="sm", style = "bordered")
+      actionBttn("general_help", "Help", icon=icon("question-circle"), size="sm", style = "bordered")
     )
   ),
   dashboardBody(

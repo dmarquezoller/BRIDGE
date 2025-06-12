@@ -9,6 +9,7 @@ source("R/modules/server/pca_server.R")
 source("R/modules/ui/enrichment_ui.R")
 source("R/modules/server/enrichment_server.R")
 source("R/modules/server/integration_server.R")
+source("R/modules/server/help_buttons_server.R")
 
 server_function <- function(input, output, session, db_path){
 
