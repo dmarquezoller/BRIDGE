@@ -2,7 +2,7 @@
 
 ## Overview
 
-BRIDGE is a user-friendly app that enables scientists to **explore, analyze and integrate multi-omics datasets** (proteomics, phosphoproteomics and RNA-seq) interactively, privately and without the need of programming skills. It supports both **individual** and **integrative** analysis of datasets and generates interactive visualisations such as heatmaps, volcano plots, and time-course clusters. BRIDGE is especiallt powerful for identifying shared biological signals across different omics layers. 
+BRIDGE is a user-friendly app that enables scientists to **explore, analyze and integrate multi-omics datasets** (proteomics, phosphoproteomics and RNA-seq) interactively, privately and without the need of programming skills. It supports both **individual** and **integrative** analysis of datasets and generates interactive visualisations such as heatmaps, volcano plots, and time-coures. BRIDGE is especially powerful for identifying shared biological signals across different omics layers. 
 
 ## Installation
 
@@ -19,7 +19,7 @@ git clone git@github.com:dmarquezoller/BRIDGE.git
 After copying the repository the environment has to be set up in R so all the libraries are available.
 
 ```R
-renv::restore() #This command is to be done inside the project
+renv::restore() #This command is to be done in R after opening the BRIDGE project
 ```
 
 After this, your local computer will have all the files and required libraries
