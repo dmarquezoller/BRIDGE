@@ -16,11 +16,11 @@ It is ideal for hypothesis generation, sanity checks, and visual inspection of s
 There is a number of inputs to be filled for a correct integration.
 First, you have to select which tabes you want to integrate (2 or more).
 After that, for each integrated table you are required to choose which columns to integrate. This is for two reasons: To allow exploration of subsets of the parent data
-and also because for a correct integration, the integrated datasets require the same number of columns, and ideally, matching timepoints.
+and also because for a correct integration, the integrated datasets require the same number of columns, and ideally, matching time-points.
 </p>
 <p>
 Once you selected the tables and columns to integrate, you will see a <strong>preview</strong> box that will let you check the column matching so you can see if you 
-are joining matching timepoints or not.
+are joining matching time-points or not.
 </p>
 
 <h3>Available plots and tables</h3>

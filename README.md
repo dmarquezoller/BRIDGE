@@ -2,14 +2,14 @@
 
 ## Overview
 
-BRIDGE is a user-friendly app that enables scientists to **explore, analyze and integrate multi-omics datasets** (proteomics, phosphoproteomics and RNA-seq) interactively, privately and without the need of programming skills. It supports both **individual** and **integrative** analysis of datasets and generates interactive visualisations such as heatmaps, volcano plots, and time-coures. BRIDGE is especially powerful for identifying shared biological signals across different omics layers. 
+BRIDGE is a user-friendly app that enables scientists to **explore, analyze and integrate multi-omics datasets** (proteomics, phosphoproteomics and RNA-seq) interactively, privately and without the need of programming skills. It supports both **individual** and **integrative** analysis of datasets and generates interactive visualizations such as heatmaps, volcano plots, and time-course. BRIDGE is especially powerful for identifying shared biological signals across different omics layers. 
 
 ## Installation
 
 In order to download and start using bridge there are some previous steps to be done, like setting the environment and creating the database.
 
 ### Setting up the environment
-    
+
 First, the user has to clone the git repository to the local machine.
 
 ```bash
@@ -34,7 +34,7 @@ touch user_database.db
 ```
 Then, after creating the empty database, it has to be filled with tables and annotation files, for that, two scripts are provided that will guide the user through the process.
 
-Both scripts assume certain homogeneity in the data. For a correct functioining of the scripts and the app, please check the **rules** inside both Python scripts.
+Both scripts assume certain homogeneity in the data. For a correct functioning of the scripts and the app, please check the **rules** inside both Python scripts.
 
 ```bash
 python /BRIDGE/Python/db_adding.py
@@ -44,7 +44,7 @@ python /BRIDGE/Python/db_adding.py
 python /BRIDGE/Python/db_adding_annotation.py
 ```
 
-Both this scripts can be executed as many times as needed. 
+Both this scripts can be executed as many times as needed.
 
 After all this, the user will have the usable database.
 
@@ -61,7 +61,7 @@ After the execution the app will be open, copy the `url` to your browser and sta
 ## File structure
 
 As said before, the code has been heavily modularized to ease the editing, debugging and improvement of the app.
-This also allows the user to furhter locally customize the app with more pipelines or plots without the need of understanding and editing the whole code 
+This also allows the user to further locally customize the app with more pipelines or plots without the need of understanding and editing the whole code
 but rather just changing the corresponding files.
 
 Here is a diagram showing all the different code files and their hierarchy. Moreover, you can also see which functions are declared in which files and a brief description of what is inside each file.

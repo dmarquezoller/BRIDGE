@@ -9,7 +9,7 @@ This step is fundamental, as all downstream visualizations and analyses are dyna
 
 <p>
 When you interact with the Data Selection panel, the application executes structured SQL queries against the preloaded <strong>SQLite database</strong>.
-This database is expected to contain the data tables accompanied by a standardized metadata table that define available species, timepoints, experimental conditions, and data modalities.
+This database is expected to contain the data tables accompanied by a standardized metadata table that define available species, time-points, experimental conditions, and data modalities.
 For a correct creation of a database use the provided </strong>Python scripts</strong> that will guide you through the process.
 </p>
 

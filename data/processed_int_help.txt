@@ -48,7 +48,7 @@ Once all of this is selected, the following will happen, assume you integrate <e
 <p>
 After integration, similar to the <em>Raw Integration</em>, a preview will be rendered for you to check how the process went. This preview will show you the dimensions of all the integrated tables
 before filtering, after filtering, and after filtering and intersection. Ideally and if there are no duplicates in any integrated dataset, the final subsets will have the same number of rows.
-Along with this, also the contrast for which the filtering was done will be shown for cheking purposes.
+Along with this, also the contrast for which the filtering was done will be shown for checking purposes.
 Finally, the <em>elbow method</em> will be computed on the final subset to obtain the optimal <code>k</code>, that is, the optimal number of clusters for that particular data. This optimal number of
 clusters will be shown in the preview for the user to know and act accordingly.
 </p>
@@ -69,7 +69,7 @@ clusters will be shown in the preview for the user to know and act accordingly.
     The resulting cluster assignments are then applied to all other datasets. This means that the same set of genes will appear in the same cluster across all heatmaps.
 
     Thanks to this synchronized clustering and the accompanying trend plots, you can easily observe whether the expression trends are consistent across omics layers.
-    For example, a gene cluster that shows upregulation in a given dataset can be checked for similar patterns in other datasets. 
+    For example, a gene cluster that shows up-regulation in a given dataset can be checked for similar patterns in other datasets. 
     This provides insight into how different layers of regulation align, diverge, or reinforce each other across the integrated omics datasets.
     </li>
 
@@ -85,7 +85,7 @@ clusters will be shown in the preview for the user to know and act accordingly.
     Each point in the plot represents a gene that is present in both datasets, with its LFC in one dataset plotted on the x-axis and
     the corresponding LFC in the other dataset on the y-axis. 
 
-    This visualization allows you to assess the correlation and agreement between layers. For example, whether upregulated genes in one omics technique are also upregulated in another omics technique. 
+    This visualization allows you to assess the correlation and agreement between layers. For example, whether up-regulated genes in one omics technique are also up-regulated in another omics technique. 
     Deviations from the diagonal line indicate discrepancies between datasets.
     </li>
 

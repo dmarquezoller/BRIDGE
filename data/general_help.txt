@@ -12,7 +12,7 @@ Each section offers tailored tools to visualize and interpret your data at diffe
 <h2>Sections</h2>
 <ul>
   <li><strong>Individual Exploration:</strong> This section allows you to explore and analyze omics datasets individually
-  (e.g., proteomics, phosphoproteomics and RNA-seq) through a set of different visualisations and tools.</li>
+  (e.g., proteomics, phosphoproteomics and RNA-seq) through a set of different visualizations and tools.</li>
   <li><strong>Integration:</strong> This section focuses on combining multiple omics datasets to reveal shared patterns,
   correlations, and integrative insights across data types, achieving this also with different plots and analyses.</li>
 </ul>

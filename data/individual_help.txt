@@ -12,12 +12,12 @@ It provides a suite of interactive and static visualizations to help identify pa
     <strong>Raw Heatmap:</strong> 
     Displays the unprocessed expression matrix to allow inspection of the raw signal across samples. 
     This is useful for identifying batch effects or global expression trends prior to normalization.
-    There is no further customisation for this plot.
+    There is no further customization for this plot.
   </li>
 
   <li>
     <strong>DEP Heatmap:</strong> 
-    Uses differential expressed analysed data to obtain a heatmap. For this plot you can also select if you want <strong>clustering</strong> and how many clusters. 
+    Uses differential expressed analyzed data to obtain a heatmap. For this plot you can also select if you want <strong>clustering</strong> and how many clusters. 
 
     Below the plot you can also find a table with the processed values, including p-values or log fold changes.
   </li>
@@ -34,16 +34,16 @@ It provides a suite of interactive and static visualizations to help identify pa
 
   <li>
     <strong>Gene Expression:</strong> 
-    Shows temporal expression trends for selected genes across timepoints. 
+    Shows temporal expression trends for selected genes across time-points. 
     You can see the expression of one or multiple genes at the same time. The search bar is connected to the database so it shows all available genes.
     You can also choose different kinds of transformations:
     <ul>
         <li>
-            For <strong>Proteomics</strong> and <strong>Phosphoproteomics</strong>: Continous, Log-Scale, Total Intensity Transform and Median normalization.
+            For <strong>Proteomics</strong> and <strong>Phosphoproteomics</strong>: Continuous, Log-Scale, Total Intensity Transform and Median normalization.
         </li>
 
         <li>
-            For <strong>RNA-seq</strong>: Continous, Log-Scale, TPM, FPKM, TMM and CPM.
+            For <strong>RNA-seq</strong>: Continuous, Log-Scale, TPM, FPKM, TMM and CPM.
         </li>
     </ul>
     Below the plot you can also find a table containing the information of the browsed genes.
