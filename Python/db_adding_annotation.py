@@ -71,7 +71,7 @@ def main():
         return
 
     # === Connect to database ===
-    db_path = "db_v1_app.db"  # You can modify or prompt for this if needed
+    db_path = input("\nEnter path to the database: ").strip()  
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
