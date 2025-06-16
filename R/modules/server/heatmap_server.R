@@ -136,8 +136,13 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             log2FC <- res[[lfc_col]]
             pval <- res[[pval_col]]
             df <- data.frame(gene_names, pval, log2FC)
-            df_table <- get_results(get_signicant(dep_output, contrast))
-
+            sig_col <- paste0(contrast, "_significant")
+            if (all(is.na(sig_col)) || all (sig_col == FALSE)) {
+              showNotification("No significant genes for this contrast.", type = "error")
+              return()
+            } else {
+              df_table <- get_results(get_signicant(dep_output, contrast))
+            }
             text_col <- gene_names
 
             volc <- EnhancedVolcano(
