@@ -16,11 +16,11 @@ import os
 #   3. The names of the columns have to be          #
 #      the precise ones above.                      #
 #   4. You can download this annotation table       #
-#      with these columns in biomart.               #
+#      with these columns in BioMart (ENSEMBL).     #          #
 #   5. The name of the annotation table uploaded    #
 #      has to follow the strict rule:               #
 #      <specie>_annotation                          #
-#      i.e. zebrafish annotation                    #
+#      i.e. zebrafish_annotation                    #
 #   6. The name of the specie has to be exactly     #
 #      the same as the one used for the data        #
 #      table.                                       #
