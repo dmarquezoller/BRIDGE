@@ -250,7 +250,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         ggplotly(result$volcano + aes(x = log2FC, y = -log10(pval)), tooltip = "text")
       })
 
-      output[[paste0("volcano_sig_table_", tbl_name)]] <- renderDT({
+      output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
         result <- volcano_plot$result()
         req(result)
         datatable(result$table, options = list(scrollX = TRUE, pageLength = 10))
@@ -302,7 +302,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
           dep_output_plot
         })
 
-        output[[paste0("ht_sig", tbl_name)]] <- renderDT({
+        output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
           result <- plot_dep_heatmap$result()
           df <- result$df
           datatable(df, options = list(scrollX = T, pageLength = 10))

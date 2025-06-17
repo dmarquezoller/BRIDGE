@@ -1,45 +1,45 @@
 #source("R/modules/ui/data_ui.R")
 #' @export
-ui <- dashboardPage(
+ui <- shinydashboard::dashboardPage(
   skin = "blue", 
-  dashboardHeader(title = "BRIDGE"),
-  dashboardSidebar(
-    sidebarMenu(
-      menuItem("Individual Exploration", tabName = "raw_data", icon = icon("table")),
-      menuItem("Integration", tabName = "Integration", icon = icon("th")),
-      actionBttn("general_help", "Help", icon=icon("question-circle"), size="sm", style = "bordered")
+  shinydashboard::dashboardHeader(title = "BRIDGE"),
+  shinydashboard::dashboardSidebar(
+    shinydashboard::sidebarMenu(
+      shinydashboard::menuItem("Individual Exploration", tabName = "raw_data", icon = shiny::icon("table")),
+      shinydashboard::menuItem("Integration", tabName = "Integration", icon = shiny::icon("th")),
+      shinyWidgets::actionBttn("general_help", "Help", icon=shiny::icon("question-circle"), size="sm", style = "bordered")
     )
   ),
-  dashboardBody(
+  shinydashboard::dashboardBody(
     # Custom font styling for the dashboard title
-    tags$head(
-      tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css?family=Inknut+Antiqua"),
-      tags$style(HTML("
+    shiny::tags$head(
+      shiny::tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css?family=Inknut+Antiqua"),
+      shiny::tags$style(shiny::HTML("
         .main-header .logo {
           font-family: 'Inknut Antiqua', sans-serif;
         }
       "))
     ),
     
-    fluidRow(
-      column(
+    shiny::fluidRow(
+      shiny::column(
         width = 9,
-        tabItems(
-          tabItem(
+        shinydashboard::tabItems(
+          shinydashboard::tabItem(
             tabName = "raw_data",
-            fluidRow(
-              uiOutput("all_tables_ui")
+            shiny::fluidRow(
+              shiny::uiOutput("all_tables_ui")
             )
           ),
-          tabItem(
+          shinydashboard::tabItem(
             tabName = "Integration",
-            fluidRow(
-              uiOutput("integration_ui")
+            shiny::fluidRow(
+              shiny::uiOutput("integration_ui")
             )
           )
         )
       ),
-      column(
+      shiny::column(
         width = 3,
         data_ui_object
       )

@@ -1,26 +1,13 @@
-#source("R/global.R")
-#source("R/modules/ui/heatmap_ui.R")
-#source("R/modules/server/heatmap_server.R")
-#source("R/modules/server/timeline_server.R")
-#source("R/modules/server/data_server.R")
-#source("R/modules/ui/timeline_ui.R")
-#source("R/modules/ui/pca_ui.R")
-#source("R/modules/server/pca_server.R")
-#source("R/modules/ui/enrichment_ui.R")
-#source("R/modules/server/enrichment_server.R")
-#source("R/modules/server/integration_server.R")
-#source("R/modules/server/help_buttons_server.R")
-
 #' @export
 server_function <- function(input, output, session, db_path){
 
   #### DATA RETRIEVING SERVER ####
 
   con <- connect_db(db_path)
-  all_tables <- dbListTables(con)
+  all_tables <- DBI::dbListTables(con)
   
   #creation of cache starr object
-  cache <- storr_dbi(
+  cache <- storr::storr_dbi(
     tbl_data = "storr_data",
     tbl_keys = "storr_keys",
     con = con
@@ -47,9 +34,9 @@ server_function <- function(input, output, session, db_path){
   output$table_selector <- renderUI({  
     tables <- valid_tables()
     if (is.null(tables)) {
-      return(helpText("No tables found for this species."))
+      return(shiny::helpText("No tables found for this species."))
     } else {
-      selectInput("selected_table", "Select a data table:", choices = tables)
+      shiny::selectInput("selected_table", "Select a data table:", choices = tables)
     }
   })
   
@@ -86,7 +73,7 @@ server_function <- function(input, output, session, db_path){
   # From the metadata table retrieved show the possible timepoints columns to choose
   output$column_selector <- renderUI({
     meta <- table_metadata()
-    if (is.null(meta)) return(helpText("No metadata available for this table."))
+    if (is.null(meta)) return(shiny::helpText("No metadata available for this table."))
     
     timepoint_cols <- unlist(strsplit(meta$timepoint_columns, ","))
     
@@ -147,7 +134,7 @@ server_function <- function(input, output, session, db_path){
   # DELETE DATA SELECTOR
 
   observe({
-    updateSelectInput(session, "remove", choices = rv$table_names, selected = NULL)
+    shiny::selectInput(session, "remove", choices = rv$table_names, selected = NULL)
   })
   
   # DELETE DATA BUTTON SERVER
@@ -161,7 +148,7 @@ server_function <- function(input, output, session, db_path){
       rv$table_names <- setdiff(rv$table_names, input$remove)
       
       # Optionally reset the dropdown selection
-      updateSelectInput(session, "remove", choices = rv$table_names, selected = NULL)
+      shiny::selectInput(session, "remove", choices = rv$table_names, selected = NULL)
     }
   })
   
@@ -173,9 +160,9 @@ server_function <- function(input, output, session, db_path){
     } else {
       # Create an unordered list with each table name as a list item
       tagList(
-        tags$ul(
+        shiny::tags$ul(
           lapply(rv$table_names, function(tbl_name) {
-            tags$li(tbl_name)
+            shiny::tags$li(tbl_name)
           })
         )
       )
@@ -191,30 +178,30 @@ server_function <- function(input, output, session, db_path){
     req(length(rv$tables) > 0)
     
     lapply(rv$table_names, function(tbl_name) {
-      box(title=paste("Table: ", tbl_name), width=12, solidHeader = TRUE, status="primary", style="overflow-x: auto", collapsible = T, collapsed = F,
-          box(title="Table", width = 12, solidHeader = T, status = "primary", style= "overflow-x: auto", collapsible = T, collapsed = F,
+      shinydashboard::box(title=paste("Table: ", tbl_name), width=12, solidHeader = TRUE, status="primary", style="overflow-x: auto", collapsible = T, collapsed = F,
+          shinydashboard::box(title="Table", width = 12, solidHeader = T, status = "primary", style= "overflow-x: auto", collapsible = T, collapsed = F,
               h3(),
               DTOutput(paste0("table_", tbl_name)),
               h3()              
           ),
-          tabBox(
-            title = actionBttn("individual_help", "Help", color = "primary" ,icon=icon("question-circle"), size="sm", style = "bordered"), width = 12,
+          tabshinydashboard::box(
+            title = shinyWidgets::actionBttn("individual_help", "Help", color = "primary" ,icon=shiny::icon("question-circle"), size="sm", style = "bordered"), width = 12,
             id = "plotTabs", selected = "Raw Heatmap",
             tabPanel("Raw Heatmap", 
-                     fluidRow(
+                     shiny::fluidRow(
                         raw_heatmap_ui(tbl_name) #Function in heatmap_ui.R
                       )
                     
             ),
             tabPanel("DEP Heatmap",
-                     fluidRow(
+                     shiny::fluidRow(
                         dep_heatmap_ui(tbl_name) #Function in heatmap_ui.R
                      )
             ),
             tabPanel("Volcano Plot",
-                     fluidRow(
-                       box(title = "Settings", width = 5, solidHeader = T, status = "info",
-                           virtualSelectInput(paste0("comparison_volcano_", tbl_name), "Select Comparison:", 
+                     shiny::fluidRow(
+                       shinydashboard::box(title = "Settings", width = 5, solidHeader = T, status = "info",
+                           virtualshiny::selectInput(paste0("comparison_volcano_", tbl_name), "Select Comparison:", 
                                               choices = rv$contrasts[[tbl_name]], 
                                               selected = rv$contrasts[[tbl_name]][1]
                                               ),
@@ -224,9 +211,9 @@ server_function <- function(input, output, session, db_path){
                                        min = 0, max = 10, value = 1.3, step = 0.1),
                            sliderInput(paste0("volcano_fccutoff_", tbl_name), "FC Threshold:", 
                                        min = 0, max = 10, value = 1, step = 0.1),
-                           actionBttn(paste0("compute_volcano_", tbl_name), span("Compute  Volcano", style = "color: white;"), style = "simple", color = "primary", size = "sm")
+                           shinyWidgets::actionBttn(paste0("compute_volcano_", tbl_name), shiny::span("Compute  Volcano", style = "color: white;"), style = "simple", color = "primary", size = "sm")
                        ),
-                       box(
+                       shinydashboard::box(
                          title = "Volcano Plot", width = 7, solidHeader = TRUE, status = "info",
                          withSpinner(
                           plotlyOutput(paste0("volcano_", tbl_name)),
@@ -237,31 +224,31 @@ server_function <- function(input, output, session, db_path){
                        )
                        
                      ),
-                     box(title="Significant Genes", width=12, solidHeader = T, status="info", collapsible = T, collapsed = F,
+                     shinydashboard::box(title="Significant Genes", width=12, solidHeader = T, status="info", collapsible = T, collapsed = F,
                          h3(),
                          DTOutput(paste0("volcano_sig_table_", tbl_name)),
                          h3()
                      )
             ),
             tabPanel("Gene Expression", 
-                     fluidRow(
+                     shiny::fluidRow(
                         timeline_gene_search(tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
                      ),
-                     fluidRow(
+                     shiny::fluidRow(
                         timeline_plot(tbl_name) #Function for the ui of the timeline plot in timeline_ui.R
                      ), 
-                     fluidRow(
+                     shiny::fluidRow(
                         timeline_table(tbl_name) #Function for the ui of the timeline table in timeline_ui.R
                      )
             ),
             tabPanel("Enrichment analysis", 
-                     fluidRow(
+                     shiny::fluidRow(
                         enrichment_settings_ui(tbl_name, rv), 
                         enrichment_plots_ui(tbl_name)
                      )
             ),
             tabPanel("PCA", 
-                    fluidRow(
+                    shiny::fluidRow(
                       pca_ui(tbl_name)
                     )
             )
@@ -276,11 +263,9 @@ server_function <- function(input, output, session, db_path){
 
   # RENDER OF RAW DATA TABLES
   
-
-
   observe({
     lapply(rv$table_names, function(tbl_name) {
-      output[[paste0("table_", tbl_name)]] <- renderDT({
+      output[[paste0("table_", tbl_name)]] <- DT::renderDT({
         datatable(rv$tables[[tbl_name]],options = list(scrollX = TRUE, pageLength = 10))
       })
     })

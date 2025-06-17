@@ -11,9 +11,9 @@ int_heatmap_server <- function(input, output, session, rv) {
         lapply(names(rv$intersected_tables_processed), function(tbl) {
         plotOutput(outputId = paste0("heatmap_", tbl), width = "80%")
         }),
-        br(),
+        shiny::br(),
         lapply(names(tables), function(tbl) {
-          box(
+          shinydashboard::box(
             title = paste("Clusters Table:", tbl),
             width = 12,
             solidHeader = TRUE,
@@ -167,7 +167,7 @@ int_heatmap_server <- function(input, output, session, rv) {
 
       if (any(rv$datatype[selected_tables] == "phosphoproteomics")) {
         # Return a nicely styled message div
-        div(
+       shiny::div(
           style = "padding: 20px; color: #d9534f; font-weight: bold; text-align: center;",
           "Scatter plot is not available when phosphoproteomics data is included because of non-1:1 row mapping."
         )

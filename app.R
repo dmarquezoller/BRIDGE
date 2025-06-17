@@ -1,5 +1,8 @@
 library(BRIDGE)
 library(future)
+library(shiny)
+library(shinydashboard)
+library(shinyWidgets)
 
 pdf(file = NULL)
 
@@ -17,12 +20,22 @@ bridge <- function() {
   db_path <- args[1]# First argument is the database path
   # Run the Shiny app, passing db_path to the server function
   app <- shiny::shinyApp(
-    ui = ui, #ui retrieved from initial_ui.R
+    ui = BRIDGE::ui, #ui retrieved from initial_ui.R
     server = function(input, output, session) {
       server_function(input, output, session, db_path) #Function in general_server.R
     }
   )
-  shiny::runApp(app)
+  if (length(args) > 1 ) {
+    port <- as.integer(args[2]) # Second argument is the port number
+    if (is.na(port) || port <= 0 || port > 65535) {
+      stop("Error: Invalid port number. Please provide a valid port number between 1 and 65535.")
+    }
+    shiny::runApp(app, port = port) # Run the app on the specified port
+  }
+  else {
+    # If no port is specified, run on the default port (3838)
+    shiny::runApp(app, port = 3838)
+  }
 }
 
 # Run the app

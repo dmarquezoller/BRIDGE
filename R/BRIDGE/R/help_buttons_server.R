@@ -3,56 +3,56 @@
 #' @export
 help_buttons <- function(input, output, session) {
 
-    general_help <- paste(readLines("./data/general_help.txt"), collapse = "\n")
+    general_help <- paste(readLines(system.file("extdata", "general_help.txt", package="BRIDGE")), collapse = "\n")
 
     observeEvent(input$general_help, {
         showModal(modalDialog(
             title = "General Information",
-            HTML(general_help), 
+            shiny::HTML(general_help), 
             easyClose = TRUE,
             footer = modalButton("Close")
         ))
     })
 
-    data_help <- paste(readLines("./data/data_help.txt"), collapse = "\n")
+    data_help <- paste(readLines(system.file("extdata", "data_help.txt", package="BRIDGE")), collapse = "\n")
 
     observeEvent(input$data_help, {
         showModal(modalDialog(
             title = "Data Import",
-            HTML(data_help), 
+            shiny::HTML(data_help), 
             easyClose = TRUE,
             footer = modalButton("Close")
         ))
     })
 
-    individual_help <- paste(readLines("./data/individual_help.txt"), collapse = "\n")
+    individual_help <- paste(readLines(system.file("extdata", "individual_help.txt", package="BRIDGE")), collapse = "\n")
 
     observeEvent(input$individual_help, {
         showModal(modalDialog(
             title = "Individual Exploration",
-            HTML(individual_help), 
+            shiny::HTML(individual_help), 
             easyClose = TRUE,
             footer = modalButton("Close")
         ))
     })
 
-    raw_int_help <- paste(readLines("./data/raw_int_help.txt"), collapse = "\n")
+    raw_int_help <- paste(readLines(system.file("extdata", "raw_int_help.txt", package="BRIDGE")), collapse = "\n")
 
     observeEvent(input$raw_int_help, {
         showModal(modalDialog(
             title = "Raw Data Integration",
-            HTML(raw_int_help), 
+            shiny::HTML(raw_int_help), 
             easyClose = TRUE,
             footer = modalButton("Close")
         ))
     })
 
-    processed_int_help <- paste(readLines("./data/processed_int_help.txt"), collapse = "\n")
+    processed_int_help <- paste(readLines(system.file("extdata", "processed_int_help.txt", package="BRIDGE")), collapse = "\n")
 
     observeEvent(input$processed_int_help, {
         showModal(modalDialog(
             title = "Processed Data Integration",
-            HTML(processed_int_help), 
+            shiny::HTML(processed_int_help), 
             easyClose = TRUE,
             footer = modalButton("Close")
         ))

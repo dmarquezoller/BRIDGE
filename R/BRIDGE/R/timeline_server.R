@@ -49,7 +49,7 @@ timeline_server <- function(input, output, session, rv) {
         group_by(StageGroup, Gene_pepG) %>%
         summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
       
-      output[[paste0("time_plot_dt_", tbl_name)]] <- renderDT({
+      output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
         datatable(data)
       })
       
@@ -132,7 +132,7 @@ timeline_server <- function(input, output, session, rv) {
           group_by(StageGroup, Gene_Name) %>%
           summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
         
-        output[[paste0("time_plot_dt_", tbl_name)]] <- renderDT({
+        output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
           datatable(data)
         })
         

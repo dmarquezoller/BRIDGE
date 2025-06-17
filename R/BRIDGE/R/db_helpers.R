@@ -1,9 +1,9 @@
 #' @export
 connect_db <- function(db_path) {
-  dbConnect(SQLite(), db_path)
+  DBI::dbConnect(RSQLite::SQLite(), db_path)
 }
 
 #' @export
 list_tables <- function(con) {
-  dbListTables(con)
+  DBI::dbListTables(con)
 }

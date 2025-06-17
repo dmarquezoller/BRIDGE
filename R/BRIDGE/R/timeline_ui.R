@@ -6,7 +6,7 @@ timeline_gene_search <- function(tbl_name, rv) {
     } else {
         scale_choices <- c("Continous", "Log-scale", "Total Intensity", "Median Normalization")
     }
-        box(
+        shinydashboard::box(
         title = "Gene Search", width = 6, solidHeader = TRUE, status = "info", 
         selectizeInput(
             inputId = paste0("search_gene_", tbl_name),
@@ -14,7 +14,7 @@ timeline_gene_search <- function(tbl_name, rv) {
             choices = NULL,
             multiple = TRUE
         ),
-        selectInput(
+        shiny::selectInput(
             inputId = paste0("scale_", tbl_name),
             label = "Select scale:",
             choices = scale_choices,
@@ -25,7 +25,7 @@ timeline_gene_search <- function(tbl_name, rv) {
 
 #' @export
 timeline_plot <- function(tbl_name) {
-    box(
+    shinydashboard::box(
         title="Expression Timeline", width = 12, solidHeader = T, status = "info",   
         h3(),
         plotOutput(paste0("time_plot_", tbl_name)),
@@ -35,7 +35,7 @@ timeline_plot <- function(tbl_name) {
 
 #' @export
 timeline_table <- function(tbl_name) {
-    box(
+    shinydashboard::box(
         title="Table Entries", width = 12, solidHeader = T, status = "info", style= "overflow-x: auto", collapsible = T, collapsed = F, 
         h3(), 
         DTOutput(paste0("time_plot_dt_", tbl_name), height = "300px"), 
