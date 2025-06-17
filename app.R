@@ -12,12 +12,22 @@ future::plan(multisession)
 bridge <- function() {
   # Retrieve command-line arguments
   args <- commandArgs(trailingOnly = TRUE)
-  # Check if db_path is provided
-  if (length(args) < 1) {
-    stop("Error: Please provide the database path as a command-line argument.")
+  
+  # Handle database path argument for both terminal and interactive use
+  if (interactive()) {
+    if (length(args) == 0) {
+      # Prompt user to select the database file interactively
+      db_path <- file.choose()
+    } else {
+      db_path <- args[1]
+    }
+  } else {
+    if (length(args) == 0) {
+      stop("Please provide the path to the database as an argument.")
+    }
+    db_path <- args[1]
   }
   
-  db_path <- args[1]# First argument is the database path
   # Run the Shiny app, passing db_path to the server function
   app <- shiny::shinyApp(
     ui = BRIDGE::ui, #ui retrieved from initial_ui.R
