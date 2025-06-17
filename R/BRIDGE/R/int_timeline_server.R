@@ -1,5 +1,5 @@
-source("R/global.R")
-
+#source("R/global.R")
+#' @export
 int_timeline_server <- function(input, output, session, data_combined, reference_time_names) {
 
   processed_data <- reactive({

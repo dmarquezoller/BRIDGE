@@ -1,3 +1,4 @@
+#' @export
 pca_ui <- function(tbl_name) {
   box(
     title = "PCA Analysis", width = 12, solidHeader = TRUE, status = "info",

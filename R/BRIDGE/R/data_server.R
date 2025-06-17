@@ -1,3 +1,4 @@
+#' @export
 data_server <- function(id, con, rv) {
   moduleServer(id, function(input, output, session) {
     output$all_tables_ui <- renderUI({

@@ -1,4 +1,4 @@
-
+#' @export
 total_intensity_normalization <- function(raw_data, pseudocount = 1) {
   # Identify sample columns (numeric only)
   sample_cols <- sapply(raw_data, is.numeric)
@@ -25,7 +25,7 @@ total_intensity_normalization <- function(raw_data, pseudocount = 1) {
   return(processed_data)
 }
 
-
+#' @export
 median_normalization <- function(raw_data, pseudocount = 1) {
   # Identify sample columns (numeric only)
   sample_cols <- sapply(raw_data, is.numeric)
@@ -52,6 +52,7 @@ median_normalization <- function(raw_data, pseudocount = 1) {
   return(processed_data)
 }
 
+#' @export
 log2_transform <- function(raw_data, pseudocount = 1) {
   # Identify sample columns (numeric only)
   sample_cols <- sapply(raw_data, is.numeric)
@@ -67,6 +68,7 @@ log2_transform <- function(raw_data, pseudocount = 1) {
   return(processed_data)
 }
 
+#' @export
 fpkm_normalization <- function(raw_data, annotation) {
   # Compute gene length
   annotation$Gene_Length <- annotation$Gene_End - annotation$Gene_Start + 1
@@ -103,6 +105,7 @@ fpkm_normalization <- function(raw_data, annotation) {
   return(processed_data)
 }
 
+#' @export
 tmm_normalization <- function(raw_data) {
   # Identify numeric columns (assumed to be raw counts)
   sample_cols <- sapply(raw_data, is.numeric)
@@ -130,6 +133,7 @@ tmm_normalization <- function(raw_data) {
   return(processed_data)
 }
 
+#' @export
 cpm_normalization <- function(raw_data) {
   # Identify numeric columns (assumed to be expression data)
   sample_cols <- sapply(raw_data, is.numeric)
@@ -151,7 +155,7 @@ cpm_normalization <- function(raw_data) {
   return(processed_data)
 }
 
-
+#' @export
 tpm_normalization <- function(fpkm_data) {
   # Identify numeric columns (assumed to be FPKM values)
   sample_cols <- sapply(fpkm_data, is.numeric)

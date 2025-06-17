@@ -1,6 +1,6 @@
-source("R/global.R")
+#source("R/global.R")
 
-
+#' @export
 int_heatmap_server <- function(input, output, session, rv) {
 
 

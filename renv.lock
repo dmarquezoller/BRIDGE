@@ -142,9 +142,8 @@
       "NeedsCompilation": "no",
       "Author": "Dirk Eddelbuettel [aut, cre] (<https://orcid.org/0000-0001-6419-907X>), John W. Emerson [aut], Michael J. Kane [aut] (<https://orcid.org/0000-0003-1899-6662>)",
       "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
-    },
+      "Repository": "CRAN"
+    },    
     "Biobase": {
       "Package": "Biobase",
       "Version": "2.66.0",
@@ -653,7 +652,6 @@
         "abind",
         "downloader"
       ],
-      "Remotes": "serenity-r/dndselectr, YuLab-SMU/clusterProfiler.dplyr",
       "biocViews": "Proteomics, MassSpectrometry, DifferentialExpression, DataRepresentation",
       "VignetteBuilder": "knitr",
       "Depends": [
@@ -665,15 +663,15 @@
         "R6 (>= 2.5.0)"
       ],
       "Config/build/clean-inst-doc": "FALSE",
+      "Author": "Zhenhuan Feng [cre, aut], Xiaofei Zhang [aut]",
+      "Maintainer": "Zhenhuan Feng <feng_zhenhuan@gibh.ac.cn>",
       "RemoteType": "github",
+      "Remotes": "serenity-r/dndselectr, YuLab-SMU/clusterProfiler.dplyr",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "DEP2",
       "RemoteUsername": "mildpiggy",
       "RemoteRef": "HEAD",
-      "RemoteSha": "fbc71b5dc499fd6114fd8705a2f73e4b429e60f5",
-      "NeedsCompilation": "no",
-      "Author": "Zhenhuan Feng [cre, aut], Xiaofei Zhang [aut]",
-      "Maintainer": "Zhenhuan Feng <feng_zhenhuan@gibh.ac.cn>"
+      "RemoteSha": "fbc71b5dc499fd6114fd8705a2f73e4b429e60f5"
     },
     "DESeq2": {
       "Package": "DESeq2",
@@ -1813,8 +1811,7 @@
       "URL": "https://sites.google.com/site/malikacharrad/research/nbclust-package",
       "License": "GPL-2",
       "NeedsCompilation": "no",
-      "Repository": "CRAN",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "PSMatch": {
       "Package": "PSMatch",
@@ -1991,8 +1988,7 @@
       "URL": "https://github.com/HenrikBengtsson/R.methodsS3",
       "BugReports": "https://github.com/HenrikBengtsson/R.methodsS3/issues",
       "NeedsCompilation": "no",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "R.oo": {
       "Package": "R.oo",
@@ -2050,8 +2046,7 @@
       "URL": "https://henrikbengtsson.github.io/R.utils/, https://github.com/HenrikBengtsson/R.utils",
       "BugReports": "https://github.com/HenrikBengtsson/R.utils/issues",
       "NeedsCompilation": "no",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "R6": {
       "Package": "R6",
@@ -2186,8 +2181,7 @@
       "NeedsCompilation": "yes",
       "Author": "Yixuan Qiu [aut, cre], Jiali Mei [aut] (Function interface of matrix operation), Gael Guennebaud [ctb] (Eigenvalue solvers from the 'Eigen' library), Jitse Niesen [ctb] (Eigenvalue solvers from the 'Eigen' library)",
       "Maintainer": "Yixuan Qiu <yixuan.qiu@cos.name>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "Rcpp": {
       "Package": "Rcpp",
@@ -2292,8 +2286,7 @@
       "NeedsCompilation": "yes",
       "Author": "Doug Bates [aut] (<https://orcid.org/0000-0001-8316-9503>), Dirk Eddelbuettel [aut, cre] (<https://orcid.org/0000-0001-6419-907X>), Romain Francois [aut] (<https://orcid.org/0000-0002-2444-4226>), Yixuan Qiu [aut] (<https://orcid.org/0000-0003-0109-6692>), Authors of Eigen [cph] (Authorship and copyright in included Eigen library as detailed in inst/COPYRIGHTS)",
       "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "RcppTOML": {
       "Package": "RcppTOML",
@@ -2323,8 +2316,7 @@
       "NeedsCompilation": "yes",
       "Author": "Dirk Eddelbuettel [aut, cre] (<https://orcid.org/0000-0001-6419-907X>), Mark Gillard [aut] (Author of 'toml++' header library)",
       "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "Rhdf5lib": {
       "Package": "Rhdf5lib",
@@ -2804,8 +2796,7 @@
       "NeedsCompilation": "yes",
       "Author": "CRAN Team [ctb, cre] (de facto maintainer since 2013), Duncan Temple Lang [aut] (<https://orcid.org/0000-0003-0159-1546>), Tomas Kalibera [ctb]",
       "Maintainer": "CRAN Team <CRAN@r-project.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "XVector": {
       "Package": "XVector",
@@ -2872,8 +2863,7 @@
       "License": "MIT + file LICENSE",
       "NeedsCompilation": "no",
       "Author": "Tony Plate [aut, cre], Richard Heiberger [aut]",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "admisc": {
       "Package": "admisc",
@@ -2897,8 +2887,7 @@
       "NeedsCompilation": "yes",
       "Author": "Adrian Dusa [aut, cre, cph] (<https://orcid.org/0000-0002-3525-9253>)",
       "Maintainer": "Adrian Dusa <dusa.adrian@unibuc.ro>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "affy": {
       "Package": "affy",
@@ -3091,8 +3080,7 @@
       "NeedsCompilation": "no",
       "Author": "Hadley Wickham [aut, cre]",
       "Maintainer": "Hadley Wickham <hadley@rstudio.com>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "backports": {
       "Package": "backports",
@@ -3217,8 +3205,7 @@
       "NeedsCompilation": "yes",
       "Author": "Steve Dutky [aut] (S original; then (after MM's port) revised and modified), Martin Maechler [cre, aut] (Initial R port; tweaks, <https://orcid.org/0000-0002-8685-9910>)",
       "Maintainer": "Martin Maechler <maechler@stat.math.ethz.ch>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "blob": {
       "Package": "blob",
@@ -3524,8 +3511,7 @@
       "NeedsCompilation": "no",
       "Author": "Jennifer Bryan [cre, aut], Hadley Wickham [ctb]",
       "Maintainer": "Jennifer Bryan <jenny@stat.ubc.ca>",
-      "Repository": "CRAN",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "circlize": {
       "Package": "circlize",
@@ -4377,8 +4363,7 @@
       "RoxygenNote": "7.3.2",
       "NeedsCompilation": "no",
       "Author": "Winston Chang [aut, cre]",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "dplyr": {
       "Package": "dplyr",
@@ -4519,8 +4504,7 @@
       "NeedsCompilation": "yes",
       "Author": "David Meyer [aut, cre] (<https://orcid.org/0000-0002-5196-3048>), Evgenia Dimitriadou [aut, cph], Kurt Hornik [aut] (<https://orcid.org/0000-0003-4198-9911>), Andreas Weingessel [aut], Friedrich Leisch [aut], Chih-Chung Chang [ctb, cph] (libsvm C++-code), Chih-Chen Lin [ctb, cph] (libsvm C++-code)",
       "Maintainer": "David Meyer <David.Meyer@R-project.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "edgeR": {
       "Package": "edgeR",
@@ -4791,18 +4775,16 @@
       "NeedsCompilation": "yes",
       "Author": "Bernd Klaus [aut], Korbinian Strimmer [aut, cre]",
       "Maintainer": "Korbinian Strimmer <strimmerlab@gmail.com>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "fgsea": {
       "Package": "fgsea",
-      "Version": "1.32.0",
-      "Source": "Bioconductor",
+      "Version": "1.35.3",
+      "Source": "GitHub",
       "Title": "Fast Gene Set Enrichment Analysis",
       "Authors@R": "c(person(\"Gennady\", \"Korotkevich\", role = \"aut\"), person(\"Vladimir\", \"Sukhov\", role = \"aut\"), person(\"Nikolay\", \"Budin\", role = \"ctb\"), person(\"Nikita\", \"Gusak\", role = \"ctb\"), person(\"Zieman\", \"Mark\", role = \"ctb\"), person(\"Alexey\", \"Sergushichev\", email = \"alsergbox@gmail.com\", role = c(\"aut\", \"cre\")))",
       "Description": "The package implements an algorithm for fast gene set enrichment analysis. Using the fast algorithm allows to make more permutations and get more fine grained p-values, which allows to use accurate stantard approaches to multiple hypothesis correction.",
       "biocViews": "GeneExpression, DifferentialExpression, GeneSetEnrichment, Pathways",
-      "SystemRequirements": "C++11",
       "Depends": [
         "R (>= 4.1)"
       ],
@@ -4844,14 +4826,14 @@
       "VignetteBuilder": "knitr",
       "URL": "https://github.com/ctlab/fgsea/",
       "BugReports": "https://github.com/ctlab/fgsea/issues",
-      "git_url": "https://git.bioconductor.org/packages/fgsea",
-      "git_branch": "RELEASE_3_20",
-      "git_last_commit": "a632ca6",
-      "git_last_commit_date": "2024-10-29",
-      "Repository": "Bioconductor 3.20",
-      "NeedsCompilation": "yes",
       "Author": "Gennady Korotkevich [aut], Vladimir Sukhov [aut], Nikolay Budin [ctb], Nikita Gusak [ctb], Zieman Mark [ctb], Alexey Sergushichev [aut, cre]",
-      "Maintainer": "Alexey Sergushichev <alsergbox@gmail.com>"
+      "Maintainer": "Alexey Sergushichev <alsergbox@gmail.com>",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "fgsea",
+      "RemoteUsername": "ctlab",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "a91d06971e9e902e7cff09ba464f2ad4cf3d1fe5"
     },
     "fontawesome": {
       "Package": "fontawesome",
@@ -5065,8 +5047,7 @@
       "ByteCompile": "yes",
       "Collate": "'options.R' 'appender.R' 'constants.R' 'layout.R' 'logger.R' 'scat.R' 'futile.logger-package.R'",
       "RoxygenNote": "5.0.1",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "futile.options": {
       "Package": "futile.options",
@@ -5084,8 +5065,7 @@
       "License": "LGPL-3",
       "LazyLoad": "yes",
       "NeedsCompilation": "no",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "future": {
       "Package": "future",
@@ -5763,11 +5743,10 @@
       ],
       "License": "GPL (>= 2)",
       "VignetteBuilder": "knitr",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Repository/R-Forge/Project": "gmm",
       "Repository/R-Forge/Revision": "212",
-      "Repository/R-Forge/DateTimeStamp": "2023-06-06 14:44:35",
-      "Encoding": "UTF-8"
+      "Repository/R-Forge/DateTimeStamp": "2023-06-06 14:44:35"
     },
     "googledrive": {
       "Package": "googledrive",
@@ -5892,8 +5871,7 @@
       "NeedsCompilation": "no",
       "Author": "Paul Murrell [cre, aut], Zhijian Wen [aut]",
       "Maintainer": "Paul Murrell <paul@stat.auckland.ac.nz>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "gson": {
       "Package": "gson",
@@ -6292,8 +6270,7 @@
       "NeedsCompilation": "no",
       "Author": "Rich FitzJohn [aut, cre]",
       "Maintainer": "Rich FitzJohn <rich.fitzjohn@gmail.com>",
-      "Repository": "CRAN",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "igraph": {
       "Package": "igraph",
@@ -6483,12 +6460,11 @@
         "foreach"
       ],
       "License": "GPL-2",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Repository/R-Forge/Project": "itertools",
       "Repository/R-Forge/Revision": "60",
       "Repository/R-Forge/DateTimeStamp": "2014-02-27 22:33:49",
-      "NeedsCompilation": "no",
-      "Encoding": "UTF-8"
+      "NeedsCompilation": "no"
     },
     "jquerylib": {
       "Package": "jquerylib",
@@ -6697,8 +6673,7 @@
       "License": "LGPL-3",
       "LazyLoad": "yes",
       "NeedsCompilation": "no",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "later": {
       "Package": "later",
@@ -6937,8 +6912,7 @@
       "License": "GPL (>= 2)",
       "SystemRequirements": "USE_C17",
       "NeedsCompilation": "yes",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "lubridate": {
       "Package": "lubridate",
@@ -7157,8 +7131,7 @@
       "License": "GPL (>= 2)",
       "URL": "https://www.r-project.org, https://github.com/stekhoven/missForest",
       "NeedsCompilation": "no",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "modelr": {
       "Package": "modelr",
@@ -7247,8 +7220,7 @@
       "NeedsCompilation": "yes",
       "Author": "Alan Genz [aut], Frank Bretz [aut], Tetsuhisa Miwa [aut], Xuefei Mi [aut], Friedrich Leisch [ctb], Fabian Scheipl [ctb], Bjoern Bornkamp [ctb] (<https://orcid.org/0000-0002-6294-8185>), Martin Maechler [ctb] (<https://orcid.org/0000-0002-8685-9910>), Torsten Hothorn [aut, cre] (<https://orcid.org/0000-0001-8301-0471>)",
       "Maintainer": "Torsten Hothorn <Torsten.Hothorn@R-project.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "mzID": {
       "Package": "mzID",
@@ -7354,8 +7326,7 @@
       "NeedsCompilation": "yes",
       "Author": "David Pierce [aut, cre] (<https://orcid.org/0000-0002-2453-9030>)",
       "Maintainer": "David Pierce <dpierce@ucsd.edu>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "nlme": {
       "Package": "nlme",
@@ -7404,12 +7375,11 @@
       "Imports": [
         "stats"
       ],
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Repository/R-Forge/Project": "norm",
       "Repository/R-Forge/Revision": "15",
       "Repository/R-Forge/DateTimeStamp": "2023-06-18 14:31:55",
-      "NeedsCompilation": "yes",
-      "Encoding": "UTF-8"
+      "NeedsCompilation": "yes"
     },
     "openssl": {
       "Package": "openssl",
@@ -8128,8 +8098,7 @@
       "NeedsCompilation": "yes",
       "Author": "David Meyer [aut, cre], Christian Buchta [aut]",
       "Maintainer": "David Meyer <David.Meyer@R-project.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "ps": {
       "Package": "ps",
@@ -8254,7 +8223,7 @@
     },
     "ragg": {
       "Package": "ragg",
-      "Version": "1.3.3",
+      "Version": "1.4.0",
       "Source": "Repository",
       "Type": "Package",
       "Title": "Graphic Devices Based on AGG",
@@ -8280,9 +8249,10 @@
       ],
       "Config/Needs/website": "ggplot2, devoid, magick, bench, tidyr, ggridges, hexbin, sessioninfo, pkgdown, tidyverse/tidytemplate",
       "Encoding": "UTF-8",
-      "RoxygenNote": "7.3.1",
+      "RoxygenNote": "7.3.2",
       "SystemRequirements": "freetype2, libpng, libtiff, libjpeg",
       "Config/testthat/edition": "3",
+      "Config/build/compilation-database": "true",
       "NeedsCompilation": "yes",
       "Author": "Thomas Lin Pedersen [cre, aut] (<https://orcid.org/0000-0002-5147-4711>), Maxim Shemanarev [aut, cph] (Author of AGG), Tony Juricic [ctb, cph] (Contributor to AGG), Milan Marusinec [ctb, cph] (Contributor to AGG), Spencer Garrett [ctb] (Contributor to AGG), Posit, PBC [cph, fnd]",
       "Repository": "CRAN"
@@ -8306,10 +8276,9 @@
       "License": "GPL (>= 2)",
       "URL": "https://www.stat.berkeley.edu/~breiman/RandomForests/",
       "NeedsCompilation": "yes",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Author": "Leo Breiman [aut] (Fortran original), Adele Cutler [aut] (Fortran original), Andy Liaw [aut, cre] (R port), Matthew Wiener [aut] (R port)",
-      "Maintainer": "Andy Liaw <andy_liaw@merck.com>",
-      "Encoding": "UTF-8"
+      "Maintainer": "Andy Liaw <andy_liaw@merck.com>"
     },
     "rappdirs": {
       "Package": "rappdirs",
@@ -8994,8 +8963,7 @@
       "NeedsCompilation": "no",
       "Author": "Achim Zeileis [aut, cre] (<https://orcid.org/0000-0003-0918-3766>), Thomas Lumley [aut] (<https://orcid.org/0000-0003-4255-5437>), Nathaniel Graham [ctb] (<https://orcid.org/0009-0002-1215-5256>), Susanne Koell [ctb]",
       "Maintainer": "Achim Zeileis <Achim.Zeileis@R-project.org>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "sass": {
       "Package": "sass",
@@ -9143,8 +9111,7 @@
       "NeedsCompilation": "no",
       "Author": "Simon Potter [aut, trl, cre], Simon Sapin [aut], Ian Bicking [aut]",
       "Maintainer": "Simon Potter <simon@sjp.co.nz>",
-      "Repository": "CRAN",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "shape": {
       "Package": "shape",
@@ -9353,8 +9320,7 @@
         "utils"
       ],
       "NeedsCompilation": "no",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "sourcetools": {
       "Package": "sourcetools",
@@ -9400,8 +9366,7 @@
       "Description": "A collection of algorithms and functions to aid statistical modeling. Includes limiting dilution analysis (aka ELDA), growth curve comparisons, mixed linear models, heteroscedastic regression, inverse-Gaussian probability calculations, Gauss quadrature and a secure convergence algorithm for nonlinear models. Also includes advanced generalized linear model functions including Tweedie and Digamma distributional families, secure convergence and exact distributional calculations for unit deviances.",
       "License": "GPL-2 | GPL-3",
       "NeedsCompilation": "yes",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "storr": {
       "Package": "storr",
@@ -10254,8 +10219,7 @@
       "URL": "https://www.rforge.net/uuid",
       "BugReports": "https://github.com/s-u/uuid/issues",
       "NeedsCompilation": "yes",
-      "Repository": "CRAN",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "vctrs": {
       "Package": "vctrs",
@@ -10328,8 +10292,7 @@
       "NeedsCompilation": "no",
       "Author": "Adrian Dusa [aut, cre, cph] (<https://orcid.org/0000-0002-3525-9253>)",
       "Maintainer": "Adrian Dusa <dusa.adrian@unibuc.ro>",
-      "Repository": "RSPM",
-      "Encoding": "UTF-8"
+      "Repository": "CRAN"
     },
     "viridisLite": {
       "Package": "viridisLite",

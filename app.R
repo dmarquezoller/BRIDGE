@@ -1,13 +1,12 @@
-source("R/global.R")
-source("R/modules/ui/initial_ui.R")
-source("R/modules/server/general_server.R")
+library(BRIDGE)
+library(future)
 
 pdf(file = NULL)
 
 future::plan(multisession)
 
 # Function to run the app with a command-line argument for db_path
-appwithoutname <- function() {
+bridge <- function() {
   # Retrieve command-line arguments
   args <- commandArgs(trailingOnly = TRUE)
   # Check if db_path is provided
@@ -27,4 +26,4 @@ appwithoutname <- function() {
 }
 
 # Run the app
-appwithoutname()
+bridge()

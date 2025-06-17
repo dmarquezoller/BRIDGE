@@ -1,5 +1,5 @@
 
-
+#' @export
 timeline_gene_search <- function(tbl_name, rv) {
     if (rv$datatype[[tbl_name]] == "rnaseq") {
         scale_choices <- c("Continous", "Log-scale", "TPM", "FPKM", "TMM", "CPM")
@@ -23,7 +23,7 @@ timeline_gene_search <- function(tbl_name, rv) {
     )
 }
 
-
+#' @export
 timeline_plot <- function(tbl_name) {
     box(
         title="Expression Timeline", width = 12, solidHeader = T, status = "info",   
@@ -33,6 +33,7 @@ timeline_plot <- function(tbl_name) {
     )
 }
 
+#' @export
 timeline_table <- function(tbl_name) {
     box(
         title="Table Entries", width = 12, solidHeader = T, status = "info", style= "overflow-x: auto", collapsible = T, collapsed = F, 

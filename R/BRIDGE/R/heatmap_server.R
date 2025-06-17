@@ -1,7 +1,6 @@
-source("R/global.R")
+#source("R/global.R")
 
-pdf(file = NULL)
-
+#' @export
 heatmap_server <- function(id, rv) {
   
   moduleServer(id, function(input, output, session) {
@@ -15,6 +14,7 @@ heatmap_server <- function(id, rv) {
   })
 }
 
+#' @export
 raw_heatmap_server <- function(input, output, session, rv) {
     observe({
     lapply(rv$table_names, function(tbl_name) {
@@ -69,7 +69,7 @@ raw_heatmap_server <- function(input, output, session, rv) {
 
 
 #### THIS FUNCTION CONTAINS BOTH THE SERVER FOR THE DEP HEATMAP AND THE VOLCANO (because both use the dep_output)
-
+#' @export
 dep_heatmap_server <- function(input, output, session, rv, cache) {
   observe({
     lapply(rv$table_names, function(tbl_name) {

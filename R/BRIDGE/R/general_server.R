@@ -1,16 +1,17 @@
-source("R/global.R")
-source("R/modules/ui/heatmap_ui.R")
-source("R/modules/server/heatmap_server.R")
-source("R/modules/server/timeline_server.R")
-source("R/modules/server/data_server.R")
-source("R/modules/ui/timeline_ui.R")
-source("R/modules/ui/pca_ui.R")
-source("R/modules/server/pca_server.R")
-source("R/modules/ui/enrichment_ui.R")
-source("R/modules/server/enrichment_server.R")
-source("R/modules/server/integration_server.R")
-source("R/modules/server/help_buttons_server.R")
+#source("R/global.R")
+#source("R/modules/ui/heatmap_ui.R")
+#source("R/modules/server/heatmap_server.R")
+#source("R/modules/server/timeline_server.R")
+#source("R/modules/server/data_server.R")
+#source("R/modules/ui/timeline_ui.R")
+#source("R/modules/ui/pca_ui.R")
+#source("R/modules/server/pca_server.R")
+#source("R/modules/ui/enrichment_ui.R")
+#source("R/modules/server/enrichment_server.R")
+#source("R/modules/server/integration_server.R")
+#source("R/modules/server/help_buttons_server.R")
 
+#' @export
 server_function <- function(input, output, session, db_path){
 
   #### DATA RETRIEVING SERVER ####

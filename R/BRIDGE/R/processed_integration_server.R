@@ -1,5 +1,6 @@
-source("R/global.R")
+#source("R/global.R")
 
+#' @export
 processed_integration <- function(input, output, session, rv){
     observeEvent(input$process_integrate_data, {
         req(input$processed_integration)

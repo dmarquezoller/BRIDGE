@@ -1,3 +1,4 @@
+#' @export
 data_ui <- function(id) {
   ns <- NS(id)
   fluidRow(
@@ -5,6 +6,7 @@ data_ui <- function(id) {
   )
 }
 
+#' @export
 data_ui_object <- box(
         title = "Data Selection", width = 12, status = "success", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
         tags$div(style = "height:8px;"),

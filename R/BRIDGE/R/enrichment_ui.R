@@ -1,3 +1,4 @@
+#' @export
 enrichment_settings_ui <- function(tbl_name, rv) {
     box(title = "Settings", width = 5, solidHeader = TRUE, status = "info", 
         virtualSelectInput(paste0("comparison_db_", tbl_name), "Select where to perform enrichment analysis:", 
@@ -13,6 +14,7 @@ enrichment_settings_ui <- function(tbl_name, rv) {
     )
 }
 
+#' @export
 enrichment_plots_ui <- function(tbl_name) {
     box(title = "Enrichment plots", width = 7, solidHeader = T, status = "info",
         h3(),

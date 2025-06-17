@@ -1,3 +1,4 @@
+#' @export
 plot_custom_tc_cluster <- function(ht_mat, exp_design, cluster_vec,
                                    groupby = "condition", group_order = NULL,
                                    col_limit = 4, row_font_size = 5, col_font_size = 5,

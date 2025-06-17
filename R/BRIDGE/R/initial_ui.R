@@ -1,5 +1,5 @@
-source("R/modules/ui/data_ui.R")
-
+#source("R/modules/ui/data_ui.R")
+#' @export
 ui <- dashboardPage(
   skin = "blue", 
   dashboardHeader(title = "BRIDGE"),

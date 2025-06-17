@@ -1,5 +1,5 @@
-source("R/global.R")
-
+#source("R/global.R")
+#' @export
 timeline_server <- function(input, output, session, rv) {
     observe({
     lapply(rv$table_names, function(tbl_name) {

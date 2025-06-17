@@ -1,10 +1,11 @@
-source("R/global.R")
-source("R/modules/server/int_timeline_server.R")
-source("R/modules/server/int_heatmap_server.R")
-source("R/modules/helpers/integration_helper.R")
-source("R/modules/server/raw_integration_server.R")
-source("R/modules/server/processed_integration_server.R")
+#source("R/global.R")
+#source("R/modules/server/int_timeline_server.R")
+#source("R/modules/server/int_heatmap_server.R")
+#source("R/modules/helpers/integration_helper.R")
+#source("R/modules/server/raw_integration_server.R")
+#source("R/modules/server/processed_integration_server.R")
 
+#' @export
 integration_ui <- function(input, output, session, rv) {
   combined_data <- reactiveVal(NULL)
 

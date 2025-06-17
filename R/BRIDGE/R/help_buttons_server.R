@@ -1,6 +1,6 @@
-source("R/global.R")
+#source("R/global.R")
 
-
+#' @export
 help_buttons <- function(input, output, session) {
 
     general_help <- paste(readLines("./data/general_help.txt"), collapse = "\n")

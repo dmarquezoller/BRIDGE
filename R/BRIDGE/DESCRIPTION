@@ -1,0 +1,48 @@
+Package: BRIDGE
+Type: Package
+Title: BRIDGE Multi-Omics Analysis Modules
+Version: 1.0.0
+Authors@R: 
+    person(given = "David", 
+           family = "Marquez-Oller", 
+           email = "david.marquez-oller@imp.ac.at", 
+           role = c("aut", "cre"))
+    person(given = "Joerg", 
+           family = "Fallmann", 
+           email = "joerg.fallmann@imp.ac.at", 
+           role = c("aut", "cre"))
+Description: Provides modular functions for the BRIDGE app, enabling scientists to explore, analyze, and integrate multi-omics datasets (proteomics, phosphoproteomics, and RNA-seq) interactively and privately, without programming skills. Supports individual and integrative analysis, generating interactive visualizations such as heatmaps, volcano plots, and time-course plots. Especially powerful for identifying shared biological signals across omics layers.
+License: MIT
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 4.0.0)
+Imports: shiny,
+    shinydashboard,
+    shinyWidgets,
+    DT,
+    ComplexHeatmap,
+    InteractiveComplexHeatmap,
+    dplyr,
+    tidyr,
+    tidyverse,
+    EnhancedVolcano,
+    DEP2,
+    plotly,
+    storr,
+    future,
+    promises,
+    SummarizedExperiment,
+    S4Vectors,
+    clusterProfiler,
+    reactome.db,
+    org.Dr.eg.db,
+    org.Hs.eg.db,
+    org.Mm.eg.db,
+    enrichplot,
+    circlize,
+    shinycssloaders,
+    NbClust,
+    DBI,
+    RSQLite
+Suggests: testthat
+RoxygenNote: 7.3.2

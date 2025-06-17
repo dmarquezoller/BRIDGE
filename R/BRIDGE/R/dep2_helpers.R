@@ -1,5 +1,4 @@
-library(DEP2)
-
+#' @export
 dep2_proteomics <- function(df, tbl_name, rv) {
   unique_pg <- make_unique(df, names = "Gene_Name", ids = "Protein_ID", delim = ";")
   ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_pg))
@@ -10,6 +9,7 @@ dep2_proteomics <- function(df, tbl_name, rv) {
   return(diff_pg)
 }
 
+#' @export
 dep2_phosphoproteomics <- function(df, tbl_name, rv) {
   df <- df[!grepl("p0", df$pepG), ] # Remove the p0
   unique_phos <- make_unique(df, names = "pepG", ids = "Protein_ID", delim = ";")
@@ -21,6 +21,7 @@ dep2_phosphoproteomics <- function(df, tbl_name, rv) {
   return(diff_phos)
 }
 
+#' @export
 dep2_rnaseq <- function(df, tbl_name, rv) {
   unique_dds <- df
   ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_dds))

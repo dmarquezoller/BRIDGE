@@ -1,3 +1,4 @@
+#' @export
 heatmap_ui <- function(id) {
   ns <- NS(id)
   tabBox(
@@ -7,7 +8,7 @@ heatmap_ui <- function(id) {
   )
 }
 
-
+#' @export
 raw_heatmap_ui <-function(tbl_name) { 
                     box(
                       title = "Raw Data Heatmap", width = 12, solidHeader = T, status = "info", 
@@ -32,7 +33,7 @@ raw_heatmap_ui <-function(tbl_name) {
                         )
                   }
 
-
+#' @export
 dep_heatmap_ui  <- function(tbl_name) { 
                         box(
                          title = "Heatmap", width = 12, solidHeader = TRUE, status = "info",
