@@ -26,8 +26,7 @@ Imports: shiny,
     dplyr,
     tidyr,
     tidyverse,
-    EnhancedVolcano,
-    DEP2,
+    EnhancedVolcano,    
     plotly,
     storr,
     future,
@@ -44,9 +43,11 @@ Imports: shiny,
     shinycssloaders,
     NbClust,
     DBI,
-    RSQLite,
-    YuLab-SMU/clusterProfiler,
+    RSQLite,    
     ReactomePA,
     msigdbr
+Remotes:
+    mildpiggy/DEP2,
+    YuLab-SMU/clusterProfiler
 Suggests: testthat
 RoxygenNote: 7.3.2
