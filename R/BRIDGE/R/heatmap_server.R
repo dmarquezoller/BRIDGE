@@ -1,5 +1,3 @@
-#source("R/global.R")
-
 #' @export
 heatmap_server <- function(id, rv) {
   

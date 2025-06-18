@@ -1,4 +1,3 @@
-#source("R/modules/ui/data_ui.R")
 #' @export
 ui <- shinydashboard::dashboardPage(
   skin = "blue", 

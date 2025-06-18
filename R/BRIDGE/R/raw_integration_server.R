@@ -1,6 +1,3 @@
-#source("R/global.R")
-#source("R/modules/server/int_timeline_server.R")
-
 #' @export
 raw_integration <- function(input, output, session, rv, combined_data){
 

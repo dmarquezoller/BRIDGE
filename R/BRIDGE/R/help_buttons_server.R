@@ -1,5 +1,3 @@
-#source("R/global.R")
-
 #' @export
 help_buttons <- function(input, output, session) {
 

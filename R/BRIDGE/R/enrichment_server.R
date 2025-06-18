@@ -1,5 +1,3 @@
-#source("R/global.R")
-
 #' @export
 enrichment_server <- function(input, output, session, rv) {
     observe(

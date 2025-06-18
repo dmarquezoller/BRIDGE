@@ -1,4 +1,3 @@
-#source("R/global.R")
 #' @export
 timeline_server <- function(input, output, session, rv) {
     observe({

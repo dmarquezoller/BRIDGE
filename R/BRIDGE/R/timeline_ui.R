@@ -1,4 +1,3 @@
-
 #' @export
 timeline_gene_search <- function(tbl_name, rv) {
     if (rv$datatype[[tbl_name]] == "rnaseq") {
