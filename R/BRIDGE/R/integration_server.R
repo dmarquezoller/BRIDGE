@@ -4,9 +4,9 @@ integration_ui <- function(input, output, session, rv) {
 
   output$integration_ui <- renderUI({
     req(length(rv$tables) > 0)
-    tagList(
-        tabshinydashboard::box(title = "Integration", id = "integration_tabs", selected = "Raw Integration", width = 12, 
-            tabPanel("Raw Integration",
+     htmltools::tagList(
+        shinydashboard::tabBox(title = "Integration", id = "integration_tabs", selected = "Raw Integration", width = 12, 
+            shiny::tabPanel("Raw Integration",
                 shiny::fluidRow(
                     shinydashboard::box(title = "Integration Settings", width = 12, status = "success", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                     shiny::fluidRow(
@@ -28,7 +28,7 @@ integration_ui <- function(input, output, session, rv) {
                 ), 
                 shinydashboard::box(
                     title = "Integrated Raw Table", width = 12, solidHeader = TRUE, status = "info", collapsible = TRUE, collapsed = FALSE, 
-                    DTOutput("integration_combined_table")
+                    DT::DTOutput("integration_combined_table")
                 ),
                 shinydashboard::box(
                     title = "Integrated Timeline Plot", width = 12, solidHeader = TRUE, status = "info",
@@ -48,7 +48,7 @@ integration_ui <- function(input, output, session, rv) {
                 )
             )
             ),
-            tabPanel("Processed Integration",
+            shiny::tabPanel("Processed Integration",
                 shiny::fluidRow(
                     shinydashboard::box(title = "Processed Integration Settings", width = 12, status = "success", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                     shiny::fluidRow(
@@ -67,9 +67,9 @@ integration_ui <- function(input, output, session, rv) {
                             p("Select for each table upon which contrast do the filtering (they should match)"),
                             shiny::uiOutput("comparison_col_selector_pi"),
                             p("----------"),
-                            numericInput("heatmap_k", "Number of clusters (k):", value = 3, min = 2, max = 10),
-                            numericInput("pval_thresh_pi", "P-value threshold:", value = 0.05, min = 0, step = 0.01),
-                            numericInput("lfc_thresh_pi", "LFC threshold:", value = 1, min = 0, step = 0.1),
+                            shiny::numericInput("heatmap_k", "Number of clusters (k):", value = 3, min = 2, max = 10),
+                            shiny::numericInput("pval_thresh_pi", "P-value threshold:", value = 0.05, min = 0, step = 0.01),
+                            shiny::numericInput("lfc_thresh_pi", "LFC threshold:", value = 1, min = 0, step = 0.1),
 
                            shiny::div(style = "text-align: center;",
                                 shinyWidgets::actionBttn("process_integrate_data", shiny::span("Integrate", style = "color: black;"), 
@@ -98,8 +98,8 @@ integration_ui <- function(input, output, session, rv) {
 
   # Preview box with column matching and unified table
   output$preview_box <- renderUI({
-    req(length(input$integration) > 0)
-    tagList(
+    shiny::req(length(input$integration) > 0)
+     htmltools::tagList(
       shinydashboard::box(
         title = "Integration Preview", width = 8, solidHeader = TRUE, status = "primary",
         shiny::uiOutput("integration_column_matching")
@@ -132,7 +132,7 @@ integration_ui <- function(input, output, session, rv) {
 
       dims_ui <- lapply(names(rv$integration_preview_dims), function(tbl) {
         dims <- rv$integration_preview_dims[[tbl]]
-        tagList(
+         htmltools::tagList(
           shiny::tags$li(shiny::tags$b(tbl)),
           shiny::tags$ul(
             shiny::tags$li(paste("Original:", paste(dims$original, collapse = " x "))),
@@ -142,7 +142,7 @@ integration_ui <- function(input, output, session, rv) {
         )
       })
 
-      tagList(
+       htmltools::tagList(
         shinydashboard::box(
           title = "Processed Integration Preview", width = 8, solidHeader = TRUE, status = "primary",
           shiny::tags$ul(
@@ -170,21 +170,21 @@ integration_ui <- function(input, output, session, rv) {
 
         tables <- rv$intersected_tables_processed
 
-        # Generate a UI list of DTOutput placeholders
-        tagList(
+        # Generate a UI list of DT::DTOutput placeholders
+         htmltools::tagList(
             lapply(names(tables), function(tbl) {
             shinydashboard::box(
                 title = paste("Processed Table:", tbl),
                 width = 12,
                 solidHeader = TRUE,
                 status = "info",
-                DTOutput(outputId = paste0("processed_tbl_", tbl))
+                DT::DTOutput(outputId = paste0("processed_tbl_", tbl))
             )
             })
         )
     })
 
-    observe({
+    shiny::observe({
         req(rv$intersected_tables_processed)
         lapply(names(rv$intersected_tables_processed), function(tbl) {
             local({
@@ -192,7 +192,7 @@ integration_ui <- function(input, output, session, rv) {
             output_id <- paste0("processed_tbl_", table_name)
             data <- as.data.frame(rv$intersected_tables_processed[[table_name]])
             output[[output_id]] <- DT::renderDT({
-                datatable(data, options = list(scrollX = TRUE, pageLength = 5))
+                DT::datatable(data, options = list(scrollX = TRUE, pageLength = 5))
             })
             })
         })
@@ -252,7 +252,7 @@ integration_ui <- function(input, output, session, rv) {
       )
     })
 
-    tagList(
+     htmltools::tagList(
       shiny::tags$ul(
         lapply(matches, function(line){
           shiny::tags$li(line)
@@ -279,7 +279,7 @@ integration_ui <- function(input, output, session, rv) {
     output$integration_combined_table <- DT::renderDT({
     if (is.null(combined_data())) {
         return(
-        datatable(
+        DT::datatable(
             data.frame(Message = "Click Integrate button to see the Integrated Table"),
             options = list(
             dom = 't',

@@ -37,7 +37,7 @@ timeline_table <- function(tbl_name) {
     shinydashboard::box(
         title="Table Entries", width = 12, solidHeader = T, status = "info", style= "overflow-x: auto", collapsible = T, collapsed = F, 
         h3(), 
-        DTOutput(paste0("time_plot_dt_", tbl_name), height = "300px"), 
+        DT::DTOutput(paste0("time_plot_dt_", tbl_name), height = "300px"), 
         h3()
     )
 }

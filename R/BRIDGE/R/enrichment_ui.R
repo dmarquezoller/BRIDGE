@@ -1,10 +1,10 @@
 #' @export
 enrichment_settings_ui <- function(tbl_name, rv) {
     shinydashboard::box(title = "Settings", width = 5, solidHeader = TRUE, status = "info", 
-        virtualshiny::selectInput(paste0("comparison_db_", tbl_name), "Select where to perform enrichment analysis:", 
+        shinyWidgets::virtualSelectInput(paste0("comparison_db_", tbl_name), "Select where to perform enrichment analysis:", 
             choices = c("GO", "KEGG", "REACTOME"),
             selected = "GO"),
-        virtualshiny::selectInput(paste0("contrasts_enrichment_", tbl_name), "Select Contrast:", 
+        shinyWidgets::virtualSelectInput(paste0("contrasts_enrichment_", tbl_name), "Select Contrast:", 
             choices = rv$contrasts[[tbl_name]], 
             selected = rv$contrasts[[tbl_name]][1]
         ),

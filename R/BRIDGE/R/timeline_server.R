@@ -1,10 +1,10 @@
 #' @export
 timeline_server <- function(input, output, session, rv) {
-    observe({
+    shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
   
     if (rv$datatype[[tbl_name]] == "phosphoproteomics") {
-      gene <- str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
+      gene <- stringr::str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
       raw_data <- rv$tables[[tbl_name]]
       req(input[[paste0("scale_", tbl_name)]])
       scale_input <- input[[paste0("scale_", tbl_name)]]
@@ -28,8 +28,8 @@ timeline_server <- function(input, output, session, rv) {
         fpkm_data <- fpkm_normalization(raw_data, annotation)
         processed_data <- tpm_normalization(fpkm_data)
       }
-      data <- subset(processed_data, str_to_lower(Gene_Name) %in% gene)
-      data$Gene_pepG <- paste(str_to_title(data$Gene_Name), data$pepG, sep = "_")
+      data <- subset(processed_data, stringr::str_to_lower(Gene_Name) %in% gene)
+      data$Gene_pepG <- paste(stringr::str_to_title(data$Gene_Name), data$pepG, sep = "_")
       
       timepoints <- c("Gene_pepG", rv$time_cols[[tbl_name]])
       unique_timepoints <- rv$time_cols[[tbl_name]] %>%
@@ -49,32 +49,32 @@ timeline_server <- function(input, output, session, rv) {
         summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
       
       output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
-        datatable(data)
+        DT::datatable(data)
       })
       
       
-      output[[paste0("time_plot_", tbl_name)]] <- renderPlot({
+      output[[paste0("time_plot_", tbl_name)]] <- shiny::renderPlot({
         
-        plot <- ggplot() +
+        plot <- ggplot2::ggplot() +
           # Plot individual replicates as dots (aligned vertically)
           geom_point(data = data_long, 
-                     aes(x = StageGroup, y = Expression, color = as.factor(str_to_title(Gene_pepG))), 
+                     aes(x = StageGroup, y = Expression, color = as.factor(stringr::str_to_title(Gene_pepG))), 
                      size = 3, alpha = 0.6) +  
           
           # Plot the mean expression line
           geom_line(data = data_avg, 
-                    aes(x = StageGroup, y = MeanExpression, color = as.factor(str_to_title(Gene_pepG)), group = str_to_title(Gene_pepG)), 
+                    aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_pepG)), group = stringr::str_to_title(Gene_pepG)), 
                     linewidth = 1.2) +
           
           # Add mean expression points (triangles)
           geom_point(data = data_avg, 
-                     aes(x = StageGroup, y = MeanExpression, color = as.factor(str_to_title(Gene_pepG))), 
+                     aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_pepG))), 
                      size = 4, shape = 17) +
           # Labels and theme
           labs(
             x = "Stage",
             y = "log Expression",
-            title = paste("Peptide Expression Time Line", str_to_title(input[[paste0("search_gene_", tbl_name)]])),
+            title = paste("Peptide Expression Time Line", stringr::str_to_title(input[[paste0("search_gene_", tbl_name)]])),
             color = "Proteins"
           ) +
           theme_minimal() +
@@ -88,7 +88,7 @@ timeline_server <- function(input, output, session, rv) {
         
       })
     }else{
-        gene <- str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
+        gene <- stringr::str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
         raw_data <- rv$tables[[tbl_name]]
         req(input[[paste0("scale_", tbl_name)]])
         scale_input <- input[[paste0("scale_", tbl_name)]]
@@ -112,7 +112,7 @@ timeline_server <- function(input, output, session, rv) {
           fpkm_data <- fpkm_normalization(raw_data, annotation)
           processed_data <- tpm_normalization(fpkm_data)
         }
-        data <- subset(processed_data, str_to_lower(Gene_Name) %in% gene)
+        data <- subset(processed_data, stringr::str_to_lower(Gene_Name) %in% gene)
         timepoints <- c("Gene_Name", rv$time_cols[[tbl_name]])
         unique_timepoints <- rv$time_cols[[tbl_name]] %>%
           gsub("_[0-9]+$", "", .) %>%  # Remove trailing _1, _2, etc.
@@ -132,31 +132,31 @@ timeline_server <- function(input, output, session, rv) {
           summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
         
         output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
-          datatable(data)
+          DT::datatable(data)
         })
         
-        output[[paste0("time_plot_",tbl_name)]] <- renderPlot({
+        output[[paste0("time_plot_",tbl_name)]] <- shiny::renderPlot({
   
-            plot <- ggplot() +
+            plot <- ggplot2::ggplot() +
               # Plot individual replicates as dots (aligned vertically)
               geom_point(data = data_long, 
-                         aes(x = StageGroup, y = Expression, color = as.factor(str_to_title(Gene_Name))), 
+                         aes(x = StageGroup, y = Expression, color = as.factor(stringr::str_to_title(Gene_Name))), 
                          size = 3, alpha = 0.6) +  
               
               # Plot the mean expression line
               geom_line(data = data_avg, 
-                        aes(x = StageGroup, y = MeanExpression, color = as.factor(str_to_title(Gene_Name)), group = str_to_title(Gene_Name)), 
+                        aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_Name)), group = stringr::str_to_title(Gene_Name)), 
                         linewidth = 1.2) +
               
               # Add mean expression points (triangles)
               geom_point(data = data_avg, 
-                         aes(x = StageGroup, y = MeanExpression, color = as.factor(str_to_title(Gene_Name))), 
+                         aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_Name))), 
                          size = 4, shape = 17) +
               # Labels and theme
               labs(
                 x = "Stage",
                 y = "log Expression",
-                title = paste("Protein Expression Time Line", str_to_title(input[[paste0("search_gene_", tbl_name)]])),
+                title = paste("Protein Expression Time Line", stringr::str_to_title(input[[paste0("search_gene_", tbl_name)]])),
                 color = "Proteins"
               ) +
               theme_minimal() +

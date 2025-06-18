@@ -1,6 +1,6 @@
 #' @export
 processed_integration <- function(input, output, session, rv){
-    observeEvent(input$process_integrate_data, {
+    shiny::observeEvent(input$process_integrate_data, {
         req(input$processed_integration)
 
         selected_tables <- input$processed_integration
@@ -15,8 +15,8 @@ processed_integration <- function(input, output, session, rv){
             lfc_col <- paste0(contrast, "_diff")
             padj_col <- paste0(contrast, "_p.adj")
             
-            # Extract the necessary columns from rowData
-            res <- as.data.frame(rowData(dep))
+            # Extract the necessary columns from SummarizedExperiment::rowData
+            res <- as.data.frame( SummarizedExperiment::rowData(dep))
 
             if (rv$datatype[[tbl]] == "rnaseq"){
             mapper <- rv$tables[[tbl]]
@@ -41,7 +41,7 @@ processed_integration <- function(input, output, session, rv){
             keep <- abs(df$diff) >= input$lfc_thresh_pi & df$p.adj <= input$pval_thresh_pi
             filtered_genes[[tbl]] <- df$Gene_Name[keep]
         
-            original_dim <- dim(assay(dep))
+            original_dim <- dim(SummarizedExperiment::assay(dep))
             filtered_dim <- length(filtered_genes[[tbl]])
 
             dim_info[[tbl]] <- list(
@@ -60,7 +60,7 @@ processed_integration <- function(input, output, session, rv){
             return()
         }
 
-        # Subset assays by intersected gene names
+        # Subset SummarizedExperiment::assays by intersected gene names
         intersected_list <- lapply(selected_tables, function(tbl) {
             data <- rv$tables[[tbl]]
             timepoints <- rv$time_cols[[tbl]]
@@ -93,7 +93,7 @@ processed_integration <- function(input, output, session, rv){
         rv$intersected_tables_processed <- intersected_list
         rv$integration_preview_dims <- lapply(selected_tables, function(tbl) {
             list(
-            original = dim(assay(rv$dep_output[[tbl]])),
+            original = dim(SummarizedExperiment::assay(rv$dep_output[[tbl]])),
             filtered = dim_info[[tbl]]$filtered,
             intersected = dim_info[[tbl]]$intersected
             )

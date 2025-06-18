@@ -14,12 +14,12 @@ server_function <- function(input, output, session, db_path){
   )
   rv <- reactiveValues(tables=list(), table_names=character(), ht_matrix = list(), time_cols = list(), datatype = character(), constrasts = list()) #variable that stores most of the important values for each table
   
-  valid_tables <- reactive({
-    req(input$species)
+  valid_tables <- shiny::reactive({
+    shiny::req(input$species)
     species <- tolower(input$species)
     
     # Query metadata table
-    metadata <- dbGetQuery(con, "SELECT table_name FROM table_metadata")
+    metadata <- DBI::dbGetQuery(con, "SELECT table_name FROM table_metadata")
     matches <- grep(paste0("^", species, "_"), metadata$table_name, value = TRUE)
     
     if (length(matches) == 0) {
@@ -31,7 +31,7 @@ server_function <- function(input, output, session, db_path){
 
   
   # Rendering of which table to choose in function of specie selected
-  output$table_selector <- renderUI({  
+  output$table_selector <- shiny::renderUI({  
     tables <- valid_tables()
     if (is.null(tables)) {
       return(shiny::helpText("No tables found for this species."))
@@ -41,10 +41,10 @@ server_function <- function(input, output, session, db_path){
   })
   
   # obtain desired metadata table from the specie and table selected 
-  table_metadata <- reactive({
-    req(input$selected_table)
+  table_metadata <- shiny::reactive({
+    shiny::req(input$selected_table)
     query <- sprintf("SELECT * FROM table_metadata WHERE table_name = '%s'", input$selected_table)
-    metadata <- dbGetQuery(con, query)
+    metadata <- DBI::dbGetQuery(con, query)
     
     if (nrow(metadata) == 0) return(NULL)
     
@@ -61,8 +61,8 @@ server_function <- function(input, output, session, db_path){
     return(meta_list)
   })
 
-  annotation_metadata <- reactive({
-    req(input$species)
+  annotation_metadata <- shiny::reactive({
+    shiny::req(input$species)
     annotation_table <- paste0(input$species, "_annotation")
     query <- sprintf("SELECT * FROM '%s'", annotation_table)
     return(query)
@@ -77,13 +77,13 @@ server_function <- function(input, output, session, db_path){
     
     timepoint_cols <- unlist(strsplit(meta$timepoint_columns, ","))
     
-    pickerInput(
+    shinyWidgets::pickerInput(
       inputId = "timepoints_selected",
       label = "Select timepoint columns to load:",
       choices = c(timepoint_cols),
       selected = NULL,
       multiple = TRUE,
-      options = pickerOptions(
+      options = shinyWidgets::pickerOptions(
         actionsBox = TRUE,
         liveSearch = TRUE,
         noneSelectedText = "Select columns",
@@ -98,9 +98,8 @@ server_function <- function(input, output, session, db_path){
   # LOAD DATA BUTTON SERVER
   
   # Server side of loading the data, selecting the desired columns 
-  observeEvent(input$load_data, {
-    req(input$selected_table, input$timepoints_selected)
-    
+  shiny::observeEvent(input$load_data, {
+    shiny::req(input$selected_table, input$timepoints_selected)
 
     meta <- table_metadata()
     annotation <- annotation_metadata()
@@ -112,8 +111,8 @@ server_function <- function(input, output, session, db_path){
     safe_cols <- sprintf('"%s"', unique(c(id_cols, timepoint_cols)))
     col_string <- paste(safe_cols, collapse = ", ")
     query <- sprintf("SELECT %s FROM %s", col_string, input$selected_table)
-    new_data <- dbGetQuery(con, query, )
-    annotation_data <- dbGetQuery(con, annotation, )
+    new_data <- DBI::dbGetQuery(con, query, )
+    annotation_data <- DBI::dbGetQuery(con, annotation, )
     table_id <- input$selected_table
     
     datatype <- strsplit(input$selected_table, "_")[[1]][2]
@@ -133,14 +132,14 @@ server_function <- function(input, output, session, db_path){
   
   # DELETE DATA SELECTOR
 
-  observe({
-    shiny::selectInput(session, "remove", choices = rv$table_names, selected = NULL)
+  shiny::observe({
+    shiny::updateSelectInput(session, "remove", choices = rv$table_names, selected = NULL)
   })
   
   # DELETE DATA BUTTON SERVER
 
-  observeEvent(input$delete_data, {
-    req(input$remove)
+  shiny::observeEvent(input$delete_data, {
+    shiny::req(input$remove)
     
     if (input$remove %in% rv$table_names) {
       # Remove the table from reactive values
@@ -148,18 +147,18 @@ server_function <- function(input, output, session, db_path){
       rv$table_names <- setdiff(rv$table_names, input$remove)
       
       # Optionally reset the dropdown selection
-      shiny::selectInput(session, "remove", choices = rv$table_names, selected = NULL)
+      shiny::updateSelectInput(session, "remove", choices = rv$table_names, selected = NULL)
     }
   })
   
   # LOADED TABLES INFO
 
-  output$loaded_info <- renderUI({
+  output$loaded_info <- shiny::renderUI({
     if (length(rv$table_names) == 0) {
       return("No table loaded yet.")
     } else {
       # Create an unordered list with each table name as a list item
-      tagList(
+       htmltools::tagList(
         shiny::tags$ul(
           lapply(rv$table_names, function(tbl_name) {
             shiny::tags$li(tbl_name)
@@ -174,40 +173,40 @@ server_function <- function(input, output, session, db_path){
 
   #### MAIN UI FOR EACH TABLE #### (includes functions for heatmap ui)
 
-  output$all_tables_ui <- renderUI({
-    req(length(rv$tables) > 0)
-    
+  output$all_tables_ui <- shiny::renderUI({
+    shiny::req(length(rv$tables) > 0)
+
     lapply(rv$table_names, function(tbl_name) {
       shinydashboard::box(title=paste("Table: ", tbl_name), width=12, solidHeader = TRUE, status="primary", style="overflow-x: auto", collapsible = T, collapsed = F,
           shinydashboard::box(title="Table", width = 12, solidHeader = T, status = "primary", style= "overflow-x: auto", collapsible = T, collapsed = F,
               h3(),
-              DTOutput(paste0("table_", tbl_name)),
+              DT::DTOutput(paste0("table_", tbl_name)),
               h3()              
           ),
-          tabshinydashboard::box(
+          shinydashboard::tabBox(
             title = shinyWidgets::actionBttn("individual_help", "Help", color = "primary" ,icon=shiny::icon("question-circle"), size="sm", style = "bordered"), width = 12,
             id = "plotTabs", selected = "Raw Heatmap",
-            tabPanel("Raw Heatmap", 
+            shiny::tabPanel("Raw Heatmap", 
                      shiny::fluidRow(
                         raw_heatmap_ui(tbl_name) #Function in heatmap_ui.R
                       )
                     
             ),
-            tabPanel("DEP Heatmap",
+            shiny::tabPanel("DEP Heatmap",
                      shiny::fluidRow(
                         dep_heatmap_ui(tbl_name) #Function in heatmap_ui.R
                      )
             ),
-            tabPanel("Volcano Plot",
+            shiny::tabPanel("Volcano Plot",
                      shiny::fluidRow(
                        shinydashboard::box(title = "Settings", width = 5, solidHeader = T, status = "info",
-                           virtualshiny::selectInput(paste0("comparison_volcano_", tbl_name), "Select Comparison:", 
+                           shinyWidgets::virtualSelectInput(paste0("comparison_volcano_", tbl_name), "Select Comparison:", 
                                               choices = rv$contrasts[[tbl_name]], 
                                               selected = rv$contrasts[[tbl_name]][1]
                                               ),
-                           selectizeInput(paste0("volcano_search_",tbl_name), "Search for Gene:",  choices = NULL, multiple=T),
-                           chooseSliderSkin("Flat", color="#3d8dbc"),
-                           sliderInput(paste0("volcano_pcutoff_", tbl_name), "FDR Threshold:", 
+                           shiny::selectizeInput(paste0("volcano_search_",tbl_name), "Search for Gene:",  choices = NULL, multiple=T),
+                           shinyWidgets::chooseSliderSkin("Flat", color="#3d8dbc"),
+                           shiny::sliderInput(paste0("volcano_pcutoff_", tbl_name), "FDR Threshold:", 
                                        min = 0, max = 10, value = 1.3, step = 0.1),
                            sliderInput(paste0("volcano_fccutoff_", tbl_name), "FC Threshold:", 
                                        min = 0, max = 10, value = 1, step = 0.1),
@@ -215,8 +214,8 @@ server_function <- function(input, output, session, db_path){
                        ),
                        shinydashboard::box(
                          title = "Volcano Plot", width = 7, solidHeader = TRUE, status = "info",
-                         withSpinner(
-                          plotlyOutput(paste0("volcano_", tbl_name)),
+                         shinycssloaders::withSpinner(
+                          plotly::plotlyOutput(paste0("volcano_", tbl_name)),
                           type = 8,
                           color = "#2b8cbe", 
                           caption = "Loading..."
@@ -226,11 +225,11 @@ server_function <- function(input, output, session, db_path){
                      ),
                      shinydashboard::box(title="Significant Genes", width=12, solidHeader = T, status="info", collapsible = T, collapsed = F,
                          h3(),
-                         DTOutput(paste0("volcano_sig_table_", tbl_name)),
+                         DT::DTOutput(paste0("volcano_sig_table_", tbl_name)),
                          h3()
                      )
             ),
-            tabPanel("Gene Expression", 
+            shiny::tabPanel("Gene Expression", 
                      shiny::fluidRow(
                         timeline_gene_search(tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
                      ),
@@ -241,13 +240,13 @@ server_function <- function(input, output, session, db_path){
                         timeline_table(tbl_name) #Function for the ui of the timeline table in timeline_ui.R
                      )
             ),
-            tabPanel("Enrichment analysis", 
+            shiny::tabPanel("Enrichment analysis", 
                      shiny::fluidRow(
                         enrichment_settings_ui(tbl_name, rv), 
                         enrichment_plots_ui(tbl_name)
                      )
             ),
-            tabPanel("PCA", 
+            shiny::tabPanel("PCA", 
                     shiny::fluidRow(
                       pca_ui(tbl_name)
                     )
@@ -263,10 +262,10 @@ server_function <- function(input, output, session, db_path){
 
   # RENDER OF RAW DATA TABLES
   
-  observe({
+  shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
       output[[paste0("table_", tbl_name)]] <- DT::renderDT({
-        datatable(rv$tables[[tbl_name]],options = list(scrollX = TRUE, pageLength = 10))
+        DT::datatable(rv$tables[[tbl_name]],options = list(scrollX = TRUE, pageLength = 10))
       })
     })
   })

@@ -2,10 +2,10 @@
 heatmap_server <- function(id, rv) {
   
   moduleServer(id, function(input, output, session) {
-    observe({
+    shiny::observe({
       lapply(rv$table_names, function(tbl_name) {
-        output[[paste0("raw_ht_", tbl_name)]] <- renderPlot({
-          Heatmap(rv$ht_matrix[[tbl_name]], show_row_dend = FALSE, show_row_names = FALSE)
+        output[[paste0("raw_ht_", tbl_name)]] <- shiny::renderPlot({
+          ComplexHeatmap::Heatmap(rv$ht_matrix[[tbl_name]], show_row_dend = FALSE, show_row_names = FALSE)
         })
       })
     })
@@ -14,7 +14,7 @@ heatmap_server <- function(id, rv) {
 
 #' @export
 raw_heatmap_server <- function(input, output, session, rv) {
-    observe({
+    shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
 
         raw_heatmap_plot <- ExtendedTask$new(function(raw_input){
@@ -31,13 +31,13 @@ raw_heatmap_server <- function(input, output, session, rv) {
             } else if (datatype == 'phosphoproteomics') {
               rownames(clean_data) <- raw_data$pepG
             }
-            raw_ht <- Heatmap(clean_data, show_row_dend = F, show_row_names = F)
+            raw_ht <- ComplexHeatmap::Heatmap(clean_data, show_row_dend = F, show_row_names = F)
 
             list(raw_ht = raw_ht)
           })
         })
 
-        observeEvent(input[[paste0("compute_raw_ht_", tbl_name)]], {
+        shiny::observeEvent(input[[paste0("compute_raw_ht_", tbl_name)]], {
   
           raw_data <- isolate(rv$tables[[tbl_name]])
           timepoint_cols <- isolate(rv$time_cols[[tbl_name]])
@@ -52,7 +52,7 @@ raw_heatmap_server <- function(input, output, session, rv) {
           raw_heatmap_plot$invoke(raw_input)
         })
           
-        output[[paste0("raw_ht_", tbl_name)]] <- renderPlot({
+        output[[paste0("raw_ht_", tbl_name)]] <- shiny::renderPlot({
           result <- raw_heatmap_plot$result()
           raw_ht <- result$raw_ht
           raw_ht
@@ -69,7 +69,7 @@ raw_heatmap_server <- function(input, output, session, rv) {
 #### THIS FUNCTION CONTAINS BOTH THE SERVER FOR THE DEP HEATMAP AND THE VOLCANO (because both use the dep_output)
 #' @export
 dep_heatmap_server <- function(input, output, session, rv, cache) {
-  observe({
+  shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
       updateSelectizeInput(session, paste0("volcano_search_",tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
       updateSelectizeInput(session, paste0("search_gene_", tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
@@ -98,11 +98,11 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
       pcut <- input[[paste0("volcano_pcutoff_", tbl_name)]]
       lfcut <- input[[paste0("volcano_fccutoff_", tbl_name)]]
 
-      dep_output <- add_rejections(dep_output, alpha = 10^-pcut, lfc = lfcut)
-      rd_names <- colnames(rowData(dep_output))
+      dep_output <- DEP2::add_rejections(dep_output, alpha = 10^-pcut, lfc = lfcut)
+      rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
       sig_cols <- grep("__significant$", rd_names, value = TRUE)
       valid_contrasts <- sub("__significant$", "_", sig_cols)  
-      #Isolate function to avoid retriggering the observe block
+      #Isolate function to avoid retriggering the shiny::observe block
       isolate({ 
         rv$dep_output[[tbl_name]] <- dep_output
         rv$contrasts[[tbl_name]] <- valid_contrasts
@@ -122,7 +122,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
           lfc_col <- paste0(contrast, "_diff")
           pval_col <- paste0(contrast, "_p.adj")
-          res <- rowData(dep_output)
+          res <- SummarizedExperiment::rowData(dep_output)
 
           # Prepare base values
           df_table <- NULL
@@ -130,7 +130,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
           text_col <- NULL
 
           if (datatype == 'proteomics') {
-            gene_names <- str_to_title(res$Gene_Name)
+            gene_names <- stringr::str_to_title(res$Gene_Name)
             log2FC <- res[[lfc_col]]
             pval <- res[[pval_col]]
             df <- data.frame(gene_names, pval, log2FC)
@@ -139,7 +139,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
               showNotification("No significant genes for this contrast.", type = "error")
               return()
             } else {
-              df_table <- get_results(get_signicant(dep_output, contrast))
+              df_table <- get_results(DEP2::get_signicant(dep_output, contrast))
             }
             text_col <- gene_names
 
@@ -158,19 +158,19 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             volc <- volc + aes(text = gene_names) + labs(color = "Legend")
 
           } else if (datatype == 'phosphoproteomics') {
-            gene_names <- str_to_title(res$Gene_Name)
+            gene_names <- stringr::str_to_title(res$Gene_Name)
             peptide <- res$pepG
             log2FC <- res[[lfc_col]]
             pval <- res[[pval_col]]
 
             df <- data.frame(peptide, pval, log2FC)
 
-            sig_se <- get_signicant(dep_output, contrast)
+            sig_se <- DEP2::get_signicant(dep_output, contrast)
             df_table <- get_results(sig_se)
-            res_all <- rowData(dep_output)
-            res_sig <- rowData(sig_se)
-            sig_genes <- str_to_title(res_sig$Gene_Name)
-            df_table$Gene_Name <- str_to_title(res_sig$Gene_Name)
+            res_all <- SummarizedExperiment::rowData(dep_output)
+            res_sig <- SummarizedExperiment::rowData(sig_se)
+            sig_genes <- stringr::str_to_title(res_sig$Gene_Name)
+            df_table$Gene_Name <- stringr::str_to_title(res_sig$Gene_Name)
             df_table <- df_table[, c("Gene_Name", colnames(df_table)[colnames(df_table) != "Gene_Name"])]
 
             text_col <- peptide
@@ -195,7 +195,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             pval <- res[[pval_col]]
             df <- data.frame(gene_ID, pval, log2FC)
 
-            df_table <- get_results(get_signicant(dep_output, contrast))
+            df_table <- DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
             text_col <- gene_ID
 
             volc <- EnhancedVolcano(
@@ -217,14 +217,14 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         })
       })
 
-      observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
+      shiny::observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
         contrast <- isolate(input[[paste0("comparison_volcano_", tbl_name)]])
         pcut <- isolate(10^(-input[[paste0("volcano_pcutoff_", tbl_name)]]))
         fccut <- isolate(input[[paste0("volcano_fccutoff_", tbl_name)]])
         highlight <- isolate(input[[paste0("volcano_search_", tbl_name)]]) %>%
           str_split(",", simplify = TRUE) %>%
           str_trim() %>%
-          str_to_title()
+          stringr::str_to_title()
         dep_output <- isolate(rv$dep_output[[tbl_name]])
         datatype <- isolate(rv$datatype[[tbl_name]])
 
@@ -241,17 +241,17 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
       })
 
 
-      output[[paste0("volcano_", tbl_name)]] <- renderPlotly({
+      output[[paste0("volcano_", tbl_name)]] <-  plotly::renderPlotly({
         result <- volcano_plot$result()
         req(result)
         df <- result$df
-        ggplotly(result$volcano + aes(x = log2FC, y = -log10(pval)), tooltip = "text")
+        ggplot2::ggplotly(result$volcano + aes(x = log2FC, y = -log10(pval)), tooltip = "text")
       })
 
       output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
         result <- volcano_plot$result()
         req(result)
-        datatable(result$table, options = list(scrollX = TRUE, pageLength = 10))
+        DT::datatable(result$table, options = list(scrollX = TRUE, pageLength = 10))
       })
 
 
@@ -265,20 +265,20 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             dep_output <- ht_inps$dep_output
             if (clustering_enabled) {
             # Apply clustering based on num_clusters
-              dep_output_plot <- plot_heatmap(dep_output, kmeans = TRUE, k = num_clusters)
+              dep_output_plot <- DEP2::plot_heatmap(dep_output, kmeans = TRUE, k = num_clusters)
             } else {
-              dep_output_plot <- plot_heatmap(dep_output)
+              dep_output_plot <- DEP2::plot_heatmap(dep_output)
             }
-            dep_pg_sig <- get_signicant(dep_output)
-            expr <- assay(dep_pg_sig)
-            gene_info <- as.data.frame(rowData(dep_pg_sig))
+            dep_pg_sig <- DEP2::get_signicant(dep_output)
+            expr <- SummarizedExperiment::assay(dep_pg_sig)
+            gene_info <- as.data.frame( SummarizedExperiment::rowData(dep_pg_sig))
             df <- cbind(gene_info, as.data.frame(expr))
             df <- df[, c(colnames(gene_info), colnames(expr))]
             list(heatmap = dep_output_plot, df = df)
           })
         })
 
-        observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
+        shiny::observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
           # Check clustering option
           clustering_enabled <- isolate(input[[paste0("clustering_", tbl_name)]])
           num_clusters <- isolate(input[[paste0("num_clusters_", tbl_name)]])
@@ -294,7 +294,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         })
   
  
-        output[[paste0("ht_", tbl_name)]] <- renderPlot({
+        output[[paste0("ht_", tbl_name)]] <- shiny::renderPlot({
           result <- plot_dep_heatmap$result()
           dep_output_plot <- result$heatmap
           dep_output_plot
@@ -303,7 +303,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
           result <- plot_dep_heatmap$result()
           df <- result$df
-          datatable(df, options = list(scrollX = T, pageLength = 10))
+          DT::datatable(df, options = list(scrollX = T, pageLength = 10))
         })
       
     })

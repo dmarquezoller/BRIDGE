@@ -1,6 +1,6 @@
 #' @export
 data_ui <- function(id) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::fluidRow(
     shiny::uiOutput(ns("all_tables_ui"))
   )

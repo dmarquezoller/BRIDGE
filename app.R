@@ -1,12 +1,14 @@
 library(BRIDGE)
 library(future)
+library(promises)
+library(tidyverse)
 library(shiny)
-library(shinydashboard)
-library(shinyWidgets)
+#library(shinydashboard)
+#library(shinyWidgets)
 
 pdf(file = NULL)
 
-future::plan(multisession)
+future::plan(multisession, workers = 4)
 
 # Function to run the app with a command-line argument for db_path
 bridge <- function() {

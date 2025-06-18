@@ -5,7 +5,7 @@ int_heatmap_server <- function(input, output, session, rv) {
   output$integrated_heatmaps <- renderUI({
     req(rv$intersected_tables_processed, input$heatmap_k)
     tables <- rv$intersected_tables_processed
-    tagList(
+     htmltools::tagList(
         lapply(names(rv$intersected_tables_processed), function(tbl) {
         plotOutput(outputId = paste0("heatmap_", tbl), width = "80%")
         }),
@@ -18,13 +18,13 @@ int_heatmap_server <- function(input, output, session, rv) {
             status = "info",
             collapsible = TRUE, 
             collapsed = FALSE, 
-            DTOutput(outputId = paste0("cluster_table_", tbl))
+            DT::DTOutput(outputId = paste0("cluster_table_", tbl))
           )
         })
     )   
   })
 
-  observe({
+  shiny::observe({
     req(rv$intersected_tables_processed, input$heatmap_k)
 
     all_tables <- rv$intersected_tables_processed
@@ -77,7 +77,7 @@ int_heatmap_server <- function(input, output, session, rv) {
         mat_ordered <- mat_ordered[ordered, , drop = FALSE]
         cluster_vec <- cluster_vec[ordered]
 
-        output[[paste0("heatmap_", tbl_name)]] <- renderPlot({
+        output[[paste0("heatmap_", tbl_name)]] <- shiny::renderPlot({
           mat <- all_tables[[tbl_name]]
           mat_scaled_tbl <- t(scale(t(mat)))
 
@@ -170,14 +170,14 @@ int_heatmap_server <- function(input, output, session, rv) {
           "Scatter plot is not available when phosphoproteomics data is included because of non-1:1 row mapping."
         )
       } else {
-        # Return the plotly output UI placeholder
-        plotlyOutput("lfc_scatter_plot", height = "400px", width = "100%")
+        # Return the plotly::plotly output UI placeholder
+        plotly::plotlyOutput("lfc_scatter_plot", height = "400px", width = "100%")
       }
     })
 
 
 
-    output$lfc_scatter_plot <- renderPlotly({
+    output$lfc_scatter_plot <-  plotly::renderPlotly({
       req(rv$intersected_tables_processed)
       selected_tables <- names(rv$intersected_tables_processed)
       req(length(selected_tables) == 2)
@@ -190,7 +190,7 @@ int_heatmap_server <- function(input, output, session, rv) {
         dep <- rv$dep_output[[tbl]]
         lfc_col <- paste0(contrast, "_diff")
 
-        res <- as.data.frame(rowData(dep))
+        res <- as.data.frame( SummarizedExperiment::rowData(dep))
 
         if (rv$datatype[[tbl]] == "rnaseq"){
           mapper <- rv$tables[[tbl]]
@@ -206,8 +206,8 @@ int_heatmap_server <- function(input, output, session, rv) {
 
       colnames_data <- colnames(scatter_data)
 
-      # Plot using ggplot and plotly
-      p <- ggplot(scatter_data, aes(x = .data[[colnames_data[2]]], y = .data[[colnames_data[3]]], text = Gene_Name)) +
+      # Plot using ggplot2::ggplot and plotly::plotly
+      p <- ggplot2::ggplot(scatter_data, aes(x = .data[[colnames_data[2]]], y = .data[[colnames_data[3]]], text = Gene_Name)) +
         geom_point(alpha = 0.7, color = "#2b8cbe") +
         geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
         labs(
@@ -215,7 +215,7 @@ int_heatmap_server <- function(input, output, session, rv) {
         ) +
         theme_minimal()
 
-      ggplotly(p, tooltip = "text")
+      ggplot2::ggplotly(p, tooltip = "text")
     })
 
 
