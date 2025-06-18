@@ -18,7 +18,7 @@ raw_heatmap_server <- function(input, output, session, rv) {
     lapply(rv$table_names, function(tbl_name) {
 
         raw_heatmap_plot <- ExtendedTask$new(function(raw_input){
-          future_promise({
+          promises::future_promise({
             raw_data <- raw_input$raw_data
             timepoint_cols <- raw_input$timepoint_cols
             datatype <- raw_input$datatype
@@ -111,7 +111,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 #### TESTING NON BLOCKING
 
      volcano_plot <- ExtendedTask$new(function(deps) {
-        future_promise({
+        promises::future_promise({
 
           dep_output <- deps$dep_output
           contrast <- deps$contrast
@@ -259,7 +259,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 #### END OF TESTING NON BLOCKING
 
       plot_dep_heatmap <- ExtendedTask$new(function(ht_inps) {
-          future_promise({
+          promises::future_promise({
             clustering_enabled <- ht_inps$clustering_enabled
             num_clusters <- ht_inps$num_clusters
             dep_output <- ht_inps$dep_output

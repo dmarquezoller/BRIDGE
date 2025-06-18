@@ -2,7 +2,7 @@ if(!require(BRIDGE)){
   devtools::document("R/BRIDGE")
   devtools::install("R/BRIDGE", keep_source = T, upgrade = "never")
   library(BRIDGE)  
-}
+1}
 library(future)
 library(promises)
 library(tidyverse)
