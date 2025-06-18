@@ -17,7 +17,7 @@ integration_ui <- function(input, output, session, rv) {
                             shinyWidgets::actionBttn("raw_int_help", "Help", color = "primary" ,icon=shiny::icon("question-circle"), size="sm", style = "bordered")
                         ),
                         shiny::tags$div(style = "height:8px;"),
-                        pickerInput(inputId = "integration", label = "Integrate", choices = rv$table_names, multiple = TRUE, options = pickerOptions(container = "body"), width = "100%"),
+                        shinyWidgets::pickerInput(inputId = "integration", label = "Integrate", choices = rv$table_names, multiple = TRUE, options = shinyWidgets::pickerOptions(container = "body"), width = "100%"),
                         shiny::uiOutput("integration_col_selector"),
                        shiny::div(style = "text-align: center;",
                             shinyWidgets::actionBttn("integrate_data", shiny::span("Integrate", style = "color: black;"), icon = shiny::span(shiny::icon("arrow-right-to-bracket"), style = "color: black;"), style = "jelly", size = "sm", class = "btn-primary")
@@ -59,10 +59,10 @@ integration_ui <- function(input, output, session, rv) {
                                 shinyWidgets::actionBttn("processed_int_help", "Help", color = "primary" ,icon=shiny::icon("question-circle"), size="sm", style = "bordered")
                             ),
                             shiny::tags$div(style = "height:8px;"),
-                            pickerInput(
+                            shinyWidgets::pickerInput(
                                 inputId = "processed_integration", label = "Integrate", 
                                 choices = rv$table_names, multiple = TRUE, 
-                                options = pickerOptions(container = "body"), width = "100%"
+                                options = shinyWidgets::pickerOptions(container = "body"), width = "100%"
                             ),
                             p("Select for each table upon which contrast do the filtering (they should match)"),
                             shiny::uiOutput("comparison_col_selector_pi"),
@@ -206,13 +206,13 @@ integration_ui <- function(input, output, session, rv) {
     req(length(input$integration) > 0)
     lapply(input$integration, function(int_tbl) {
       cols <- rv$time_cols[[int_tbl]]
-      pickerInput(
+      shinyWidgets::pickerInput(
         inputId = paste0("cols_selected_int", int_tbl),
         label = paste0("Select columns from ", int_tbl, " to load:"),
         choices = c(cols),
         selected = NULL,
         multiple = TRUE,
-        options = pickerOptions(
+        options = shinyWidgets::pickerOptions(
           actionsBox = TRUE,
           liveSearch = TRUE,
           noneSelectedText = "Select columns",
