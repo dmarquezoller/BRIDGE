@@ -13,6 +13,7 @@ library(shiny)
 pdf(file = NULL)
 
 future::plan(multisession, workers = 4)
+set.seed(42)
 
 # Function to run the app with a command-line argument for db_path
 bridge <- function() {

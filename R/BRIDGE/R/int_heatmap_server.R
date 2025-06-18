@@ -215,7 +215,7 @@ int_heatmap_server <- function(input, output, session, rv) {
         ) +
         theme_minimal()
 
-      ggplot2::ggplotly(p, tooltip = "text")
+      plotly::ggplotly(p, tooltip = "text")
     })
 
 

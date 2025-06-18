@@ -143,7 +143,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             }
             text_col <- gene_names
 
-            volc <- EnhancedVolcano(
+            volc <- EnhancedVolcano::EnhancedVolcano(
               df,
               lab = gene_names,
               selectLab = c("a"),
@@ -175,7 +175,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
             text_col <- peptide
 
-            volc <- EnhancedVolcano(
+            volc <- EnhancedVolcano::EnhancedVolcano(
               df,
               lab = peptide,
               selectLab = c("a"),
@@ -198,7 +198,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             df_table <- DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
             text_col <- gene_ID
 
-            volc <- EnhancedVolcano(
+            volc <- EnhancedVolcano::EnhancedVolcano(
               df,
               lab = gene_ID,
               selectLab = c("a"),
@@ -245,7 +245,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         result <- volcano_plot$result()
         req(result)
         df <- result$df
-        ggplot2::ggplotly(result$volcano + aes(x = log2FC, y = -log10(pval)), tooltip = "text")
+        plotly::ggplotly(result$volcano + aes(x = log2FC, y = -log10(pval)), tooltip = "text")
       })
 
       output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({

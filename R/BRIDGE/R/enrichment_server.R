@@ -18,8 +18,8 @@ enrichment_server <- function(input, output, session, rv) {
                 contrast <- input[[paste0("contrasts_enrichment_", tbl_name)]]
                 dep_output <- rv$dep_output[[tbl_name]]
                 dep_pg <- dep_output %>% DEP2::add_rejections(alpha = 0.05,lfc = 2)
-                check_enrichment_depends()
-                check_organismDB_depends(species) # organism annotation for mouse
+                DEP2::check_enrichment_depends()
+                DEP2::check_organismDB_depends(species) # organism annotation for mouse
                 print(species)
                 print(enrichment_type)
                 print(contrast)
