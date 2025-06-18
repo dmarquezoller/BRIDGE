@@ -6,7 +6,7 @@ timeline_server <- function(input, output, session, rv) {
     if (rv$datatype[[tbl_name]] == "phosphoproteomics") {
       gene <- stringr::str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
       raw_data <- rv$tables[[tbl_name]]
-      req(input[[paste0("scale_", tbl_name)]])
+     shiny::req(input[[paste0("scale_", tbl_name)]])
       scale_input <- input[[paste0("scale_", tbl_name)]]
       if ( scale_input == "Total Intensity") {
         processed_data <- total_intensity_normalization(raw_data)
@@ -90,7 +90,7 @@ timeline_server <- function(input, output, session, rv) {
     }else{
         gene <- stringr::str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
         raw_data <- rv$tables[[tbl_name]]
-        req(input[[paste0("scale_", tbl_name)]])
+       shiny::req(input[[paste0("scale_", tbl_name)]])
         scale_input <- input[[paste0("scale_", tbl_name)]]
         if ( scale_input == "Total Intensity") {
           processed_data <- total_intensity_normalization(raw_data)

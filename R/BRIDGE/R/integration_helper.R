@@ -43,40 +43,40 @@ plot_custom_tc_cluster <- function(ht_mat, exp_design, cluster_vec,
   # Line plot function
   panel_fun2 <- function(index, nm) {
     pushViewport(viewport(xscale = c(0, (2 * ngroup + 1)), yscale = c(-2, 2)))
-    grid.rect()
+   grid::grid.rect()
     
-    gby <- annotation_axis_grob(
+    gby <- ComplexHeatmap::annotation_axis_grob(
       at = c(-1.7, 0, 1.7),
       labels = c(-1.7, 0, 1.7),
       labels_rot = 0,
       side = "left", facing = "inside",
-      gp = gpar(fontsize = 5)
+      gp =ggfun::gpar(fontsize = 5)
     )
     
-    grid.polyline(
+   grid::grid.polyline(
       y = as.vector(t((ht_mat2[index, , drop = FALSE] / 4) + 0.5)),
       x = rep(seq(from = 2 / (2 * ngroup + 2), to = (2 * ngroup) / (2 * ngroup + 1), length.out = ngroup), length(index)),
       id = rep(1:length(index), each = ngroup),
-      gp = gpar(col = col_fun_line(mebership[index]), lwd = 1, alpha = 0.5)
+      gp =ggfun::gpar(col = col_fun_line(mebership[index]), lwd = 1, alpha = 0.5)
     )
     
     if (cluster_vec[index[1]] == levels(cluster_vec)[k]) {
-      gbx <- annotation_axis_grob(
+      gbx <- ComplexHeatmap::annotation_axis_grob(
         at = seq(2, 2 * ngroup, by = 2),
         labels = colnames(ht_mat2),
         labels_rot = 45,
         side = "bottom", facing = "outside",
-        gp = gpar(fontsize = col_font_size)
+        gp =ggfun::gpar(fontsize = col_font_size)
       )
-      grid.draw(gbx)
+     grid::grid.draw(gbx)
     }
     
-    grid.draw(gby)
+   grid::grid.draw(gby)
     popViewport()
   }
   
   # Row annotation with trend lines
-  anno <- rowAnnotation(foo = anno_link(
+  anno <- ComplexHeatmap::rowAnnotation(foo = ComplexHeatmap::anno_link(
     align_to = cluster_vec,
     which = "row",
     panel_fun = panel_fun2,
@@ -102,8 +102,8 @@ plot_custom_tc_cluster <- function(ht_mat, exp_design, cluster_vec,
     row_gap = unit(1, "mm"),
     cluster_columns = FALSE,
     heatmap_legend_param = list(title = "Centered value", title_position = "leftcenter-rot"),
-    row_names_gp = gpar(fontsize = row_font_size),
-    column_names_gp = gpar(fontsize = col_font_size),
+    row_names_gp =ggfun::gpar(fontsize = row_font_size),
+    column_names_gp =ggfun::gpar(fontsize = col_font_size),
     right_annotation = anno
   )
   

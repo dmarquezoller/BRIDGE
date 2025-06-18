@@ -1,7 +1,7 @@
 #' @export
 processed_integration <- function(input, output, session, rv){
     shiny::observeEvent(input$process_integrate_data, {
-        req(input$processed_integration)
+       shiny::req(input$processed_integration)
 
         selected_tables <- input$processed_integration
         filtered_genes <- list()
@@ -27,7 +27,7 @@ processed_integration <- function(input, output, session, rv){
             }
 
             if (!all(c("Gene_Name", lfc_col, padj_col) %in% colnames(res))) {
-            showNotification(paste("Missing columns in table:", tbl), type = "error")
+           shiny::showNotification(paste("Missing columns in table:", tbl), type = "error")
             next
             }
 
@@ -54,7 +54,7 @@ processed_integration <- function(input, output, session, rv){
         all_ids <- lapply(filtered_genes, unlist)
         common_ids <- Reduce(intersect, all_ids)
         if (length(common_ids) == 0) {
-            showNotification("No intersected significant genes found across selected datasets.", type = "error")
+           shiny::showNotification("No intersected significant genes found across selected datasets.", type = "error")
             rv$intersected_tables_processed <- NULL
             rv$integration_preview_dims <- NULL
             return()
@@ -98,7 +98,7 @@ processed_integration <- function(input, output, session, rv){
             intersected = dim_info[[tbl]]$intersected
             )
         })
-        elbow <- NbClust(data_for_elbow, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
+        elbow <- NbClust::NbClust(data_for_elbow, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
         optimal_k <- as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
         rv$optimal_k <- optimal_k
         names(rv$integration_preview_dims) <- selected_tables

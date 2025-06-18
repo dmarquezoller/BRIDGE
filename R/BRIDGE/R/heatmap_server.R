@@ -94,7 +94,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         cache$set(cache_key, dep_output)
       }
 
-      req(input[[paste0("volcano_pcutoff_", tbl_name)]],  input[[paste0("volcano_fccutoff_", tbl_name)]])
+     shiny::req(input[[paste0("volcano_pcutoff_", tbl_name)]],  input[[paste0("volcano_fccutoff_", tbl_name)]])
       pcut <- input[[paste0("volcano_pcutoff_", tbl_name)]]
       lfcut <- input[[paste0("volcano_fccutoff_", tbl_name)]]
 
@@ -136,7 +136,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             df <- data.frame(gene_names, pval, log2FC)
             sig_col <- paste0(contrast, "_significant")
             if (all(is.na(sig_col)) || all (sig_col == FALSE)) {
-              showNotification("No significant genes for this contrast.", type = "error")
+             shiny::showNotification("No significant genes for this contrast.", type = "error")
               return()
             } else {
               df_table <-DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
@@ -243,14 +243,14 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
       output[[paste0("volcano_", tbl_name)]] <-  plotly::renderPlotly({
         result <- volcano_plot$result()
-        req(result)
+       shiny::req(result)
         df <- result$df
         plotly::ggplotly(result$volcano + aes(x = log2FC, y = -log10(pval)), tooltip = "text")
       })
 
       output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
         result <- volcano_plot$result()
-        req(result)
+       shiny::req(result)
         DT::datatable(result$table, options = list(scrollX = TRUE, pageLength = 10))
       })
 

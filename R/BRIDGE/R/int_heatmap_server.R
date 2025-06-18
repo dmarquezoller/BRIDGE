@@ -2,8 +2,8 @@
 int_heatmap_server <- function(input, output, session, rv) {
 
 
-  output$integrated_heatmaps <- renderUI({
-    req(rv$intersected_tables_processed, input$heatmap_k)
+  output$integrated_heatmaps <-shiny::renderUI({
+   shiny::req(rv$intersected_tables_processed, input$heatmap_k)
     tables <- rv$intersected_tables_processed
      htmltools::tagList(
         lapply(names(rv$intersected_tables_processed), function(tbl) {
@@ -25,7 +25,7 @@ int_heatmap_server <- function(input, output, session, rv) {
   })
 
   shiny::observe({
-    req(rv$intersected_tables_processed, input$heatmap_k)
+   shiny::req(rv$intersected_tables_processed, input$heatmap_k)
 
     all_tables <- rv$intersected_tables_processed
     k <- input$heatmap_k
@@ -39,7 +39,7 @@ int_heatmap_server <- function(input, output, session, rv) {
 
     # Perform k-means clustering on scaled data
     if (nrow(mat_scaled) < k) {
-      showNotification(paste("Cannot create", k, 
+     shiny::showNotification(paste("Cannot create", k, 
                             "clusters from", nrow(mat_scaled), "genes."),
                       type = "error")
       return(NULL)
@@ -89,7 +89,7 @@ int_heatmap_server <- function(input, output, session, rv) {
 
           # Safeguard: avoid empty trend lines
           if (nrow(line_profiles) == 0 || ncol(line_profiles) == 0) {
-            showNotification("Could not compute trend lines — data missing or clustering failed", type = "error")
+           shiny::showNotification("Could not compute trend lines — data missing or clustering failed", type = "error")
             return(NULL)
           }
 
@@ -100,15 +100,15 @@ int_heatmap_server <- function(input, output, session, rv) {
           }))
 
           # Annotation: line plots next to each cluster
-          trend_anno <- rowAnnotation(trend = anno_link(
+          trend_anno <- ComplexHeatmap::rowAnnotation(trend = ComplexHeatmap::anno_link(
             align_to = cluster_vec,
             which = "row",
             panel_fun = function(index, nm) {
-              grid.rect()
-              grid.lines(
+             grid::grid.rect()
+             grid::grid.lines(
                 x = seq_len(ncol(line_profiles_norm)) / ncol(line_profiles_norm),
                 y = line_profiles_norm[as.integer(nm), ],
-                gp = gpar(col = "#2b8cbe", lwd = 1)
+                gp =ggfun::gpar(col = "#2b8cbe", lwd = 1)
               )
             },
             side = "right",
@@ -124,8 +124,8 @@ int_heatmap_server <- function(input, output, session, rv) {
             show_row_dend = FALSE,
             show_column_dend = TRUE,
             row_split = cluster_vec,
-            row_names_gp = gpar(fontsize = 6),
-            column_names_gp = gpar(fontsize = 8),
+            row_names_gp =ggfun::gpar(fontsize = 6),
+            column_names_gp =ggfun::gpar(fontsize = 8),
             heatmap_legend_param = list(title = "Expression"),
             right_annotation = trend_anno
           )
@@ -158,10 +158,10 @@ int_heatmap_server <- function(input, output, session, rv) {
     })
 
 
-    output$lfc_scatter_ui <- renderUI({
-      req(rv$intersected_tables_processed)
+    output$lfc_scatter_ui <-shiny::renderUI({
+     shiny::req(rv$intersected_tables_processed)
       selected_tables <- names(rv$intersected_tables_processed)
-      req(length(selected_tables) == 2)
+     shiny::req(length(selected_tables) == 2)
 
       if (any(rv$datatype[selected_tables] == "phosphoproteomics")) {
         # Return a nicely styled message div
@@ -178,9 +178,9 @@ int_heatmap_server <- function(input, output, session, rv) {
 
 
     output$lfc_scatter_plot <-  plotly::renderPlotly({
-      req(rv$intersected_tables_processed)
+     shiny::req(rv$intersected_tables_processed)
       selected_tables <- names(rv$intersected_tables_processed)
-      req(length(selected_tables) == 2)
+     shiny::req(length(selected_tables) == 2)
 
 
       scatter_data <- data.frame(Gene_Name = rownames(rv$intersected_tables_processed[[1]]))

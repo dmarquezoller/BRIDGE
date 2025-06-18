@@ -2,8 +2,8 @@
 integration_ui <- function(input, output, session, rv) {
   combined_data <- reactiveVal(NULL)
 
-  output$integration_ui <- renderUI({
-    req(length(rv$tables) > 0)
+  output$integration_ui <-shiny::renderUI({
+   shiny::req(length(rv$tables) > 0)
      htmltools::tagList(
         shinydashboard::tabBox(title = "Integration", id = "integration_tabs", selected = "Raw Integration", width = 12, 
             shiny::tabPanel("Raw Integration",
@@ -97,7 +97,7 @@ integration_ui <- function(input, output, session, rv) {
   })
 
   # Preview box with column matching and unified table
-  output$preview_box <- renderUI({
+  output$preview_box <-shiny::renderUI({
     shiny::req(length(input$integration) > 0)
      htmltools::tagList(
       shinydashboard::box(
@@ -109,8 +109,8 @@ integration_ui <- function(input, output, session, rv) {
 
 
 
-  output$comparison_col_selector_pi <- renderUI({
-    req(input$processed_integration)
+  output$comparison_col_selector_pi <-shiny::renderUI({
+   shiny::req(input$processed_integration)
     lapply(input$processed_integration, function(tbl) {
       available_comparisons <- rv$contrasts[[tbl]]
       shiny::selectInput(
@@ -126,9 +126,9 @@ integration_ui <- function(input, output, session, rv) {
 
 
 
-    output$preview_box_integrate <- renderUI({
-      req(rv$integration_preview_dims)
-      req(rv$optimal_k)
+    output$preview_box_integrate <-shiny::renderUI({
+     shiny::req(rv$integration_preview_dims)
+     shiny::req(rv$optimal_k)
 
       dims_ui <- lapply(names(rv$integration_preview_dims), function(tbl) {
         dims <- rv$integration_preview_dims[[tbl]]
@@ -165,8 +165,8 @@ integration_ui <- function(input, output, session, rv) {
     })
 
 
-    output$processed_integrated_tables <- renderUI({
-        req(rv$intersected_tables_processed)
+    output$processed_integrated_tables <-shiny::renderUI({
+       shiny::req(rv$intersected_tables_processed)
 
         tables <- rv$intersected_tables_processed
 
@@ -185,7 +185,7 @@ integration_ui <- function(input, output, session, rv) {
     })
 
     shiny::observe({
-        req(rv$intersected_tables_processed)
+       shiny::req(rv$intersected_tables_processed)
         lapply(names(rv$intersected_tables_processed), function(tbl) {
             local({
             table_name <- tbl
@@ -202,8 +202,8 @@ integration_ui <- function(input, output, session, rv) {
 
 
   # Column selector for each selected table
-  output$integration_col_selector <- renderUI({
-    req(length(input$integration) > 0)
+  output$integration_col_selector <-shiny::renderUI({
+   shiny::req(length(input$integration) > 0)
     lapply(input$integration, function(int_tbl) {
       cols <- rv$time_cols[[int_tbl]]
       shinyWidgets::pickerInput(
@@ -229,8 +229,8 @@ integration_ui <- function(input, output, session, rv) {
 
 
   # Show how columns will be matched
-  output$integration_column_matching <- renderUI({
-    req(length(input$integration) > 1)
+  output$integration_column_matching <-shiny::renderUI({
+   shiny::req(length(input$integration) > 1)
 
     selected_columns <- lapply(input$integration, function(tbl) {
       input[[paste0("cols_selected_int", tbl)]]

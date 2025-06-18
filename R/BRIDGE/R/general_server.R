@@ -71,7 +71,7 @@ server_function <- function(input, output, session, db_path){
   # COLUMN SELECTOR INPUT 
 
   # From the metadata table retrieved show the possible timepoints columns to choose
-  output$column_selector <- renderUI({
+  output$column_selector <-shiny::renderUI({
     meta <- table_metadata()
     if (is.null(meta)) return(shiny::helpText("No metadata available for this table."))
     

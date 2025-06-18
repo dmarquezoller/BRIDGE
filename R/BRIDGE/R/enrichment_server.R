@@ -4,7 +4,7 @@ enrichment_server <- function(input, output, session, rv) {
         lapply(rv$table_names, function(tbl_name) {
             shiny::observeEvent(input[[paste0("compute_enrichment_", tbl_name)]], {
                 if (rv$datatype[[tbl_name]] == "phosphoproteomics") {
-                    output[[paste0("enrichment_", tbl_name)]] <- renderUI({
+                    output[[paste0("enrichment_", tbl_name)]] <-shiny::renderUI({
                         shiny::tags$div(
                         style = "padding: 20px; color: #d9534f; font-weight: bold; text-align: center;",
                         "No enrichment plot available for phosphoproteomics datasets."

@@ -2,7 +2,7 @@
 raw_integration <- function(input, output, session, rv, combined_data){
 
     shiny::observeEvent(input$integrate_data, {
-        req(length(input$integration) > 0)
+       shiny::req(length(input$integration) > 0)
         selected_tables <- input$integration
         selected_types <- sapply(selected_tables, function(tbl) rv$datatype[[tbl]])
 

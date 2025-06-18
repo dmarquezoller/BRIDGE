@@ -2,7 +2,7 @@
 int_timeline_server <- function(input, output, session, data_combined, reference_time_names) {
 
   processed_data <- reactive({
-    req(input$scale_integration)
+   shiny::req(input$scale_integration)
     scale_input <- input$scale_integration
     raw_data <- data_combined
     if (scale_input == "Continous") {
@@ -13,7 +13,7 @@ int_timeline_server <- function(input, output, session, data_combined, reference
   })
 
   selected_data <- reactive({
-    req(input$search_gene_integration)
+   shiny::req(input$search_gene_integration)
     gene <- stringr::str_to_lower(trimws(input$search_gene_integration))
     data <- processed_data()
     data <- subset(data, stringr::str_to_lower(Gene_Name) %in% gene)
