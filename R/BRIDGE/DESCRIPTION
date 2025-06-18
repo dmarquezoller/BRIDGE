@@ -44,6 +44,9 @@ Imports: shiny,
     shinycssloaders,
     NbClust,
     DBI,
-    RSQLite
+    RSQLite,
+    YuLab-SMU/clusterProfiler,
+    ReactomePA,
+    msigdbr
 Suggests: testthat
 RoxygenNote: 7.3.2
