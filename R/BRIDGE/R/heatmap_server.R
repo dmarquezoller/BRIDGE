@@ -139,7 +139,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
               showNotification("No significant genes for this contrast.", type = "error")
               return()
             } else {
-              df_table <- get_results(DEP2::get_signicant(dep_output, contrast))
+              df_table <-DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
             }
             text_col <- gene_names
 
@@ -166,7 +166,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             df <- data.frame(peptide, pval, log2FC)
 
             sig_se <- DEP2::get_signicant(dep_output, contrast)
-            df_table <- get_results(sig_se)
+            df_table <-DEP2::get_results(sig_se)
             res_all <- SummarizedExperiment::rowData(dep_output)
             res_sig <- SummarizedExperiment::rowData(sig_se)
             sig_genes <- stringr::str_to_title(res_sig$Gene_Name)
