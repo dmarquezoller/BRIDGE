@@ -1,7 +1,7 @@
 
 local({
 
-  # theshiny::requested version of renv
+  # the requested version of renv
   version <- "1.1.4"
   attr(version, "sha") <- NULL
 
@@ -528,7 +528,7 @@ local({
     # bail if it doesn't exist
     if (!file.exists(tarball)) {
   
-      # let the user know we weren't able to honour theirshiny::request
+      # let the user know we weren't able to honour their request
       fmt <- "- RENV_BOOTSTRAP_TARBALL is set (%s) but does not exist."
       msg <- sprintf(fmt, tarball)
       warning(msg)
@@ -747,7 +747,7 @@ local({
     if (!is.na(prefix))
       return(prefix)
   
-    # if the user hasshiny::requested an automatic prefix, generate it
+    # if the user has requested an automatic prefix, generate it
     auto <- Sys.getenv("RENV_PATHS_PREFIX_AUTO", unset = NA)
     if (is.na(auto) && getRversion() >= "4.4.0")
       auto <- "TRUE"
@@ -878,7 +878,7 @@ local({
   
   renv_bootstrap_library_root_name <- function(project) {
   
-    # use project name as-is ifshiny::requested
+    # use project name as-is if requested
     asis <- Sys.getenv("RENV_PATHS_LIBRARY_ROOT_ASIS", unset = "FALSE")
     if (asis)
       return(basename(project))
@@ -931,7 +931,7 @@ local({
     # https://github.com/rstudio/renv/issues/1625
     description <- description %||% packageDescription("renv")
   
-    # check whethershiny::requested version 'version' matches loaded version of renv
+    # check whether requested version 'version' matches loaded version of renv
     sha <- attr(version, "sha", exact = TRUE)
     valid <- if (!is.null(sha))
       renv_bootstrap_validate_version_dev(sha, description)
@@ -941,7 +941,7 @@ local({
     if (valid)
       return(TRUE)
   
-    # the loaded version of renv doesn't match theshiny::requested version;
+    # the loaded version of renv doesn't match the requested version;
     # give the user instructions on how to proceed
     dev <- identical(description[["RemoteType"]], "github")
     remote <- if (dev)

@@ -523,6 +523,55 @@
       "Author": "Zuguang Gu [aut, cre] (<https://orcid.org/0000-0002-7395-8709>)",
       "Maintainer": "Zuguang Gu <z.gu@dkfz.de>"
     },
+    "ReactomePA": {
+      "Package": "ReactomePA",
+      "Version": "1.50.0",
+      "Source": "Bioconductor",
+      "Type": "Package",
+      "Title": "Reactome Pathway Analysis",
+      "Authors@R": "c(person(given = \"Guangchuang\", family = \"Yu\", email = \"guangchuangyu@gmail.com\", role  = c(\"aut\", \"cre\")), person(given = \"Vladislav\", family = \"Petyuk\", email = \"petyuk@gmail.com\", role  = \"ctb\"))",
+      "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>",
+      "Description": "This package provides functions for pathway analysis based on REACTOME pathway database. It implements enrichment analysis, gene set enrichment analysis and several functions for visualization.  This package is not affiliated with the Reactome team.",
+      "Depends": [
+        "R (>= 3.4.0)"
+      ],
+      "Imports": [
+        "AnnotationDbi",
+        "DOSE (>= 3.5.1)",
+        "enrichplot",
+        "ggplot2 (>= 3.3.5)",
+        "ggraph",
+        "reactome.db",
+        "igraph",
+        "graphite",
+        "gson",
+        "yulab.utils (>= 0.1.5)"
+      ],
+      "Suggests": [
+        "BiocStyle",
+        "clusterProfiler",
+        "knitr",
+        "rmarkdown",
+        "org.Hs.eg.db",
+        "prettydoc",
+        "testthat"
+      ],
+      "VignetteBuilder": "knitr",
+      "ByteCompile": "true",
+      "License": "GPL-2",
+      "URL": "https://yulab-smu.top/contribution-knowledge-mining/",
+      "BugReports": "https://github.com/GuangchuangYu/ReactomePA/issues",
+      "biocViews": "Pathways, Visualization, Annotation, MultipleComparison, GeneSetEnrichment, Reactome",
+      "RoxygenNote": "7.3.2",
+      "Encoding": "UTF-8",
+      "git_url": "https://git.bioconductor.org/packages/ReactomePA",
+      "git_branch": "RELEASE_3_20",
+      "git_last_commit": "5651432",
+      "git_last_commit_date": "2024-10-29",
+      "Repository": "Bioconductor 3.20",
+      "NeedsCompilation": "no",
+      "Author": "Guangchuang Yu [aut, cre], Vladislav Petyuk [ctb]"
+    },
     "DBI": {
       "Package": "DBI",
       "Version": "1.2.3",
@@ -8333,6 +8382,55 @@
       "License": "CC BY 4.0",
       "biocViews": "AnnotationData, FunctionalAnnotation",
       "NeedsCompilation": "no"
+    },
+    "ReactomePA": {
+      "Package": "ReactomePA",
+      "Version": "1.50.0",
+      "Source": "Bioconductor",
+      "Type": "Package",
+      "Title": "Reactome Pathway Analysis",
+      "Authors@R": "c(person(given = \"Guangchuang\", family = \"Yu\", email = \"guangchuangyu@gmail.com\", role  = c(\"aut\", \"cre\")), person(given = \"Vladislav\", family = \"Petyuk\", email = \"petyuk@gmail.com\", role  = \"ctb\"))",
+      "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>",
+      "Description": "This package provides functions for pathway analysis based on REACTOME pathway database. It implements enrichment analysis, gene set enrichment analysis and several functions for visualization.  This package is not affiliated with the Reactome team.",
+      "Depends": [
+        "R (>= 3.4.0)"
+      ],
+      "Imports": [
+        "AnnotationDbi",
+        "DOSE (>= 3.5.1)",
+        "enrichplot",
+        "ggplot2 (>= 3.3.5)",
+        "ggraph",
+        "reactome.db",
+        "igraph",
+        "graphite",
+        "gson",
+        "yulab.utils (>= 0.1.5)"
+      ],
+      "Suggests": [
+        "BiocStyle",
+        "clusterProfiler",
+        "knitr",
+        "rmarkdown",
+        "org.Hs.eg.db",
+        "prettydoc",
+        "testthat"
+      ],
+      "VignetteBuilder": "knitr",
+      "ByteCompile": "true",
+      "License": "GPL-2",
+      "URL": "https://yulab-smu.top/contribution-knowledge-mining/",
+      "BugReports": "https://github.com/GuangchuangYu/ReactomePA/issues",
+      "biocViews": "Pathways, Visualization, Annotation, MultipleComparison, GeneSetEnrichment, Reactome",
+      "RoxygenNote": "7.3.2",
+      "Encoding": "UTF-8",
+      "git_url": "https://git.bioconductor.org/packages/ReactomePA",
+      "git_branch": "RELEASE_3_20",
+      "git_last_commit": "5651432",
+      "git_last_commit_date": "2024-10-29",
+      "Repository": "Bioconductor 3.20",
+      "NeedsCompilation": "no",
+      "Author": "Guangchuang Yu [aut, cre], Vladislav Petyuk [ctb]"
     },
     "readr": {
       "Package": "readr",
