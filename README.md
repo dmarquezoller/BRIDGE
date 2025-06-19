@@ -13,7 +13,7 @@ In order to download and start using bridge there are some previous steps to be 
 First, the user has to clone the git repository to the local machine.
 
 ```bash
-git clone git@github.com:dmarquezoller/BRIDGE.git
+git clone https://github.com/dmarquezoller/BRIDGE
  ```
 
 After copying the repository the environment has to be set up in R so all the libraries are available.
