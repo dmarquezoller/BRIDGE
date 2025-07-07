@@ -63,7 +63,7 @@ server_function <- function(input, output, session, db_path){
 
   annotation_metadata <- shiny::reactive({
     shiny::req(input$species)
-    annotation_table <- paste0(input$species, "_annotation")
+    annotation_table <- input$annotation_table
     query <- sprintf("SELECT * FROM '%s'", annotation_table)
     return(query)
   })
@@ -94,6 +94,31 @@ server_function <- function(input, output, session, db_path){
       width = "100%"
     )
   })
+
+  valid_anno <- shiny::reactive({
+    shiny::req(input$species)
+    species <- tolower(input$species)
+    
+    # Query metadata table
+    metadata <- DBI::dbGetQuery(con, "SELECT table_name FROM annotation_metadata")
+    matches <- grep(paste0("^", species, "_"), metadata$table_name, value = TRUE)
+    
+    if (length(matches) == 0) {
+      return(NULL)
+    } else {
+      return(matches)
+    }
+  })
+
+
+  output$annotation_selector <- shiny::renderUI({
+    anno_files <- valid_anno()
+    if (is.null(anno_files)) {
+      return(shiny::helpText("No annotation files found for this species."))
+    } else {
+      shiny::selectInput("annotation_table", "Select an annotation file:", choices = anno_files)
+    }
+  })
   
   # LOAD DATA BUTTON SERVER
   
@@ -112,6 +137,7 @@ server_function <- function(input, output, session, db_path){
     col_string <- paste(safe_cols, collapse = ", ")
     query <- sprintf("SELECT %s FROM %s", col_string, input$selected_table)
     new_data <- DBI::dbGetQuery(con, query, )
+
     annotation_data <- DBI::dbGetQuery(con, annotation, )
     table_id <- input$selected_table
     
@@ -124,8 +150,8 @@ server_function <- function(input, output, session, db_path){
       rv$id_cols[[table_id]] <- id_cols
       rv$time_cols[[table_id]] <- input$timepoints_selected
       rv$datatype[[table_id]] <- datatype
-      rv$annotation[[table_id]] <- annotation_data
       rv$species[[table_id]] <- input$species
+      rv$annotation[[table_id]] <- annotation_data
       
     }
   })
