@@ -30,7 +30,7 @@ server_function <- function(input, output, session, db_path){
   })
 
   
-  # Rendering of which table to choose in function of specie selected
+  # Rendering of which table to choose in function of species selected
   output$table_selector <- shiny::renderUI({  
     tables <- valid_tables()
     if (is.null(tables)) {
@@ -40,7 +40,7 @@ server_function <- function(input, output, session, db_path){
     }
   })
   
-  # obtain desired metadata table from the specie and table selected 
+  # obtain desired metadata table from the species and table selected 
   table_metadata <- shiny::reactive({
     shiny::req(input$selected_table)
     query <- sprintf("SELECT * FROM table_metadata WHERE table_name = '%s'", input$selected_table)

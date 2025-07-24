@@ -19,7 +19,7 @@ import os
 #      columns                                      #
 #   5. The name of the table must adhere to the     #
 #      following structure:                         #
-#        - specie_datatype_(optional info)_id       #
+#        - species_datatype_(optional info)_id       #
 #      i.e. zebrafish_rnaseq_investigatorA_1        #                          
 #   6. For phosphoproteomics an additional          #
 #      identifier is needed: the peptide with the   #
