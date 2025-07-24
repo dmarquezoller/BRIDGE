@@ -24,6 +24,8 @@ data_ui_object <- shinydashboard::box(
         shiny::tags$div(style = "height:10px;"),
         shiny::uiOutput("column_selector"),
         shiny::tags$div(style = "height:10px;"),
+        shiny::uiOutput("annotation_selector"),
+        shiny::tags$div(style = "height:10px"),
        shiny::div(style = "text-align: center;",
             shinyWidgets::actionBttn("load_data", shiny::span("Load Data", style = "color: black;"), icon = shiny::span(shiny::icon("play"), style = "color: black;"), style = "jelly", size="sm", class = "btn-success"),
             shiny::br(), shiny::br(),  

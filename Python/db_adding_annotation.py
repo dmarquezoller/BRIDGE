@@ -19,12 +19,15 @@ import os
 #      with these columns in biomart.               #
 #   5. The name of the annotation table uploaded    #
 #      has to follow the strict rule:               #
-#      <specie>_annotation                          #
-#      i.e. zebrafish annotation                    #
-#   6. The name of the specie has to be exactly     #
+#      <species>_annotation_<version>                #
+#      i.e. zebrafish_annotation_GRCz11             #
+#   6. The name of the species has to be exactly     #
 #      the same as the one used for the data        #
 #      table.                                       #
-#                                                   #
+#   7. Thanks to the versioning of the annotation   #
+#      file, you are allowed to have more than one  #
+#      and select which one to use when you upload  #
+#      the table.                                   #
 #                                                   #
 #   * If any of these rules is not met for a        #
 #     table submited to the database, the app       #
