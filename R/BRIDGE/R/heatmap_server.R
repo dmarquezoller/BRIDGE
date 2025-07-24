@@ -263,6 +263,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             clustering_enabled <- ht_inps$clustering_enabled
             num_clusters <- ht_inps$num_clusters
             dep_output <- ht_inps$dep_output
+            ht_matrix <- ht_inps$ht_matrix
             if (clustering_enabled) {
             # Apply clustering based on num_clusters
               dep_output_plot <- DEP2::plot_heatmap(dep_output, kmeans = TRUE, k = num_clusters)
@@ -274,7 +275,9 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             gene_info <- as.data.frame( SummarizedExperiment::rowData(dep_pg_sig))
             df <- cbind(gene_info, as.data.frame(expr))
             df <- df[, c(colnames(gene_info), colnames(expr))]
-            list(heatmap = dep_output_plot, df = df)
+            elbow <- NbClust::NbClust(ht_matrix, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
+            optimal_k <- as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
+            list(heatmap = dep_output_plot, df = df, optimal_k = optimal_k)
           })
         })
 
@@ -283,11 +286,13 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
           clustering_enabled <- isolate(input[[paste0("clustering_", tbl_name)]])
           num_clusters <- isolate(input[[paste0("num_clusters_", tbl_name)]])
           dep_output <- isolate(rv$dep_output[[tbl_name]])
+          ht_matrix <- isolate(rv$ht_matrix[[tbl_name]])
 
           ht_inps <- list(
             clustering_enabled = clustering_enabled,
             num_clusters = num_clusters,
-            dep_output = dep_output
+            dep_output = dep_output,
+            ht_matrix = ht_matrix
           )
 
           plot_dep_heatmap$invoke(ht_inps)
@@ -304,6 +309,19 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
           result <- plot_dep_heatmap$result()
           df <- result$df
           DT::datatable(df, options = list(scrollX = T, pageLength = 10))
+        })
+
+        output[[paste0("optimal_k", tbl_name)]] <- renderUI({
+          result <- plot_dep_heatmap$result()
+          if (!is.null(result$optimal_k)) {
+            htmltools::tagList(
+              shiny::tags$ul(
+                shiny::tags$li(paste("The optimal k for this table following the elbow rule is: ", result$optimal_k))
+              )
+            )
+          } else {
+            return(NULL)
+          }
         })
       
     })
