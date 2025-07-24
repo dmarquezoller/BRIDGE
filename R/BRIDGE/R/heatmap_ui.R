@@ -54,7 +54,9 @@ dep_heatmap_ui  <- function(tbl_name) {
                              p("Enable clustering:"),
                              shinyWidgets::switchInput(paste0("clustering_", tbl_name), value = T, onLabel = "YES", offLabel = "NO", width = 'auto'),
                              shiny::numericInput(paste0("num_clusters_", tbl_name), "Select Number of Clusters", min = 2, step = 1, value = 3),
-                             shinyWidgets::actionBttn(paste0("recompute_heatmap_", tbl_name), shiny::span("Compute Heatmap", style = "color: white;"), style = "simple", color = "primary", size = "sm")
+                             shinyWidgets::actionBttn(paste0("recompute_heatmap_", tbl_name), shiny::span("Compute Heatmap", style = "color: white;"), style = "simple", color = "primary", size = "sm"),
+                             h1(),
+                             uiOutput(paste0("optimal_k", tbl_name))                            
                            )
                          ),
                          h5(),
