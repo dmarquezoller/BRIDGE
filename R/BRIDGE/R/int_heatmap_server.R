@@ -158,10 +158,15 @@ int_heatmap_server <- function(input, output, session, rv) {
     })
 
 
+    output$lfc_scatter_selector <- shiny::renderUI({
+      shiny::req(rv$scatter_plots)
+      shiny::selectInput("scatter_comparisons", "Select comparison:", choices = names(rv$scatter_plots))
+    })
+
     output$lfc_scatter_ui <-shiny::renderUI({
      shiny::req(rv$intersected_tables_processed)
       selected_tables <- names(rv$intersected_tables_processed)
-     shiny::req(length(selected_tables) == 2)
+     shiny::req(rv$scatter_plots)
 
       if (any(rv$datatype[selected_tables] == "phosphoproteomics")) {
         # Return a nicely styled message div
@@ -170,7 +175,6 @@ int_heatmap_server <- function(input, output, session, rv) {
           "Scatter plot is not available when phosphoproteomics data is included because of non-1:1 row mapping."
         )
       } else {
-        # Return the plotly::plotly output UI placeholder
         plotly::plotlyOutput("lfc_scatter_plot", height = "400px", width = "100%")
       }
     })
@@ -178,44 +182,9 @@ int_heatmap_server <- function(input, output, session, rv) {
 
 
     output$lfc_scatter_plot <-  plotly::renderPlotly({
-     shiny::req(rv$intersected_tables_processed)
-      selected_tables <- names(rv$intersected_tables_processed)
-     shiny::req(length(selected_tables) == 2)
-
-
-      scatter_data <- data.frame(Gene_Name = rownames(rv$intersected_tables_processed[[1]]))
-
-      for (tbl in selected_tables) {
-        contrast <- input[[paste0("pi_comparison_selected_", tbl)]]
-        dep <- rv$dep_output[[tbl]]
-        lfc_col <- paste0(contrast, "_diff")
-
-        res <- as.data.frame( SummarizedExperiment::rowData(dep))
-
-        if (rv$datatype[[tbl]] == "rnaseq"){
-          mapper <- rv$tables[[tbl]]
-          mapper <- mapper[, c("Gene_ID", "Gene_Name")]
-          res$Gene_ID <- rownames(res)
-          res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
-        }
-
-        df <- res[, c("Gene_Name", lfc_col)]
-        colnames(df) <- c("Gene_Name", paste0("LFC: ", tbl))
-        scatter_data <- merge(scatter_data, df, by = "Gene_Name", all.x = TRUE)
-      }
-
-      colnames_data <- colnames(scatter_data)
-
-      # Plot using ggplot2::ggplot and plotly::plotly
-      p <- ggplot2::ggplot(scatter_data, aes(x = .data[[colnames_data[2]]], y = .data[[colnames_data[3]]], text = Gene_Name)) +
-        geom_point(alpha = 0.7, color = "#2b8cbe") +
-        geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
-        labs(
-          title = "LFC Scatter Plot of Intersected Genes"
-        ) +
-        theme_minimal()
-
-      plotly::ggplotly(p, tooltip = "text")
+     shiny::req(rv$scatter_plots)
+     shiny::req(input[["scatter_comparisons"]])
+     plotly::ggplotly(rv$scatter_plots[[input[["scatter_comparisons"]]]], tooltip = "text")
     })
 
 

@@ -89,7 +89,57 @@ processed_integration <- function(input, output, session, rv){
             data_for_elbow <- intersected_list[[tbl]]
         }
 
+        selected_tables <- names(intersected_list)
+
+        scatter_data <- data.frame(Gene_Name = rownames(intersected_list[[1]]))
+
+        for (tbl in selected_tables) {
+            contrast <- input[[paste0("pi_comparison_selected_", tbl)]]
+            dep <- rv$dep_output[[tbl]]
+            lfc_col <- paste0(contrast, "_diff")
+
+            res <- as.data.frame( SummarizedExperiment::rowData(dep))
+
+            if (rv$datatype[[tbl]] == "rnaseq"){
+            mapper <- rv$tables[[tbl]]
+            mapper <- mapper[, c("Gene_ID", "Gene_Name")]
+            res$Gene_ID <- rownames(res)
+            res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
+            }
+
+            df <- res[, c("Gene_Name", lfc_col)]
+            colnames(df) <- c("Gene_Name", paste0("LFC: ", tbl))
+            scatter_data <- merge(scatter_data, df, by = "Gene_Name", all.x = TRUE)
+        }
+
+
+        lfc_cols <- setdiff(colnames(scatter_data), "Gene_Name")
+
+        plot_list <- list()
+        for (i in 1:(length(lfc_cols)-1)) {
+            for (j in (i+1):length(lfc_cols)) {
+                df_plot <- scatter_data %>%
+                select(Gene_Name, x = all_of(lfc_cols[i]), y = all_of(lfc_cols[j])) %>%
+                filter(!is.na(x) & !is.na(y))
+                
+                p <- ggplot(df_plot, aes(x = x, y = y, text = Gene_Name)) +
+                geom_point(alpha = 0.7, color = "#2b8cbe") +
+                geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
+                labs(
+                    title = paste(lfc_cols[i], "vs", lfc_cols[j]),
+                    x = lfc_cols[i],
+                    y = lfc_cols[j]
+                ) +
+                theme_minimal()
+                
+                # Store plotly version
+                plot_list[[paste(lfc_cols[i], lfc_cols[j], sep = "_vs_")]] <- p
+            }
+        }
+
+
         # Save results
+        rv$scatter_plots <- plot_list
         rv$intersected_tables_processed <- intersected_list
         rv$integration_preview_dims <- lapply(selected_tables, function(tbl) {
             list(

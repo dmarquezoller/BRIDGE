@@ -88,6 +88,7 @@ integration_ui <- function(input, output, session, rv) {
                       shiny::uiOutput("integrated_heatmaps")
                     ),
                     shinydashboard::box(title = "LFC Scatterplot", width = 12, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                      shiny::uiOutput("lfc_scatter_selector"),
                       shiny::uiOutput("lfc_scatter_ui")
                     )
 
