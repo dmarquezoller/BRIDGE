@@ -100,8 +100,8 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
       dep_output <- DEP2::add_rejections(dep_output, alpha = 10^-pcut, lfc = lfcut)
       rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
-      sig_cols <- grep("__significant$", rd_names, value = TRUE)
-      valid_contrasts <- sub("__significant$", "_", sig_cols)  
+      sig_cols <- grep("._significant$", rd_names, value = TRUE)
+      valid_contrasts <- sub("._significant$", "_", sig_cols)  
       #Isolate function to avoid retriggering the shiny::observe block
       isolate({ 
         rv$dep_output[[tbl_name]] <- dep_output

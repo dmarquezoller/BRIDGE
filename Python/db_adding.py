@@ -11,15 +11,17 @@ import os
 #        - protein id -> renamed -> Protein ID      #
 #      All of the name rules specified must be      #
 #      strictly followed.                           #
-#   3. All the timeline columns must have a         #
-#      single integer in the end specifying         #
-#      the replicate                                #
-#        -i.e. X6_hpf_1                             #
-#   4. There must be no NAs in any identifier       #
+#   3. All the value columns must have an           #
+#      integer in the end specifying                #
+#      the replicate, preceeded by a "_".           #
+#      No more underscores must be used in the name.#
+#      For more separations, use other symbols.     #
+#        -i.e. X6.hpf_1                             #
+#   4. There can not be NAs in any identifier       #
 #      columns                                      #
 #   5. The name of the table must adhere to the     #
 #      following structure:                         #
-#        - species_datatype_(optional info)_id       #
+#        - species_datatype_(optional info)_id      #
 #      i.e. zebrafish_rnaseq_investigatorA_1        #                          
 #   6. For phosphoproteomics an additional          #
 #      identifier is needed: the peptide with the   #
@@ -29,7 +31,9 @@ import os
 #                                                   #
 #   * If any of these rules is not met for a        #
 #     table submited to the database, the app       #
-#     will most likely crash                        #                            
+#     will most likely crash. Read them carefuly    #
+#     and ensure that your database meets all the   #
+#     requirements                                  #                            
 #                                                   #
 #####################################################
 
