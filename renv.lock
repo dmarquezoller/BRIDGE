@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.5.0",
+    "Version": "4.5.1",
     "Repositories": [
       {
         "Name": "BioCsoft",
@@ -143,7 +143,59 @@
       "Author": "Dirk Eddelbuettel [aut, cre] (<https://orcid.org/0000-0001-6419-907X>), John W. Emerson [aut], Michael J. Kane [aut] (<https://orcid.org/0000-0003-1899-6662>)",
       "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
       "Repository": "CRAN"
-    },    
+    },
+    "BRIDGE": {
+      "Package": "BRIDGE",
+      "Version": "1.0.0",
+      "Source": "unknown",
+      "Type": "Package",
+      "Title": "BRIDGE Multi-Omics Analysis Modules",
+      "Authors@R": "person(given = \"David\",  family = \"Marquez-Oller\",  email = \"david.marquez-oller@imp.ac.at\",  role = c(\"aut\", \"cre\")) person(given = \"Joerg\",  family = \"Fallmann\",  email = \"joerg.fallmann@imp.ac.at\",  role = c(\"aut\", \"cre\"))",
+      "Description": "Provides modular functions for the BRIDGE app, enabling scientists to explore, analyze, and integrate multi-omics datasets (proteomics, phosphoproteomics, and RNA-seq) interactively and privately, without programming skills. Supports individual and integrative analysis, generating interactive visualizations such as heatmaps, volcano plots, and time-course plots. Especially powerful for identifying shared biological signals across omics layers.",
+      "License": "MIT",
+      "Encoding": "UTF-8",
+      "Depends": [
+        "R (>= 4.0.0)"
+      ],
+      "Imports": [
+        "shiny",
+        "shinydashboard",
+        "shinyWidgets",
+        "htmltools",
+        "DT",
+        "ComplexHeatmap",
+        "InteractiveComplexHeatmap",
+        "dplyr",
+        "tidyr",
+        "tidyverse",
+        "EnhancedVolcano",
+        "plotly",
+        "storr",
+        "future",
+        "promises",
+        "SummarizedExperiment",
+        "S4Vectors",
+        "reactome.db",
+        "org.Dr.eg.db",
+        "org.Hs.eg.db",
+        "org.Mm.eg.db",
+        "enrichplot",
+        "circlize",
+        "shinycssloaders",
+        "NbClust",
+        "DBI",
+        "RSQLite",
+        "ReactomePA",
+        "msigdbr"
+      ],
+      "Suggests": [
+        "testthat"
+      ],
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Joerg Fallmann [aut, cre]",
+      "Maintainer": "Joerg Fallmann <joerg.fallmann@imp.ac.at>"
+    },
     "Biobase": {
       "Package": "Biobase",
       "Version": "2.66.0",
@@ -5390,7 +5442,7 @@
     },
     "future": {
       "Package": "future",
-      "Version": "1.49.0",
+      "Version": "1.67.0",
       "Source": "Repository",
       "Title": "Unified Parallel and Distributed Processing in R for Everyone",
       "Depends": [
@@ -5418,6 +5470,42 @@
       "ByteCompile": "TRUE",
       "URL": "https://future.futureverse.org, https://github.com/futureverse/future",
       "BugReports": "https://github.com/futureverse/future/issues",
+      "Language": "en-US",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "Collate": "'000.bquote.R' '000.import.R' '000.re-exports.R' '010.tweakable.R' '010.utils-parallelly.R' 'backend_api-01-FutureBackend-class.R' 'backend_api-03.MultiprocessFutureBackend-class.R' 'backend_api-11.ClusterFutureBackend-class.R' 'backend_api-11.MulticoreFutureBackend-class.R' 'backend_api-11.SequentialFutureBackend-class.R' 'backend_api-13.MultisessionFutureBackend-class.R' 'backend_api-ConstantFuture-class.R' 'backend_api-Future-class.R' 'backend_api-FutureRegistry.R' 'backend_api-UniprocessFuture-class.R' 'backend_api-evalFuture.R' 'core_api-cancel.R' 'core_api-future.R' 'core_api-reset.R' 'core_api-resolved.R' 'core_api-value.R' 'delayed_api-futureAssign.R' 'delayed_api-futureOf.R' 'demo_api-mandelbrot.R' 'infix_api-01-futureAssign_OP.R' 'infix_api-02-globals_OP.R' 'infix_api-03-seed_OP.R' 'infix_api-04-stdout_OP.R' 'infix_api-05-conditions_OP.R' 'infix_api-06-lazy_OP.R' 'infix_api-07-label_OP.R' 'infix_api-08-plan_OP.R' 'infix_api-09-tweak_OP.R' 'protected_api-FutureCondition-class.R' 'protected_api-FutureGlobals-class.R' 'protected_api-FutureResult-class.R' 'protected_api-futures.R' 'protected_api-globals.R' 'protected_api-journal.R' 'protected_api-resolve.R' 'protected_api-signalConditions.R' 'testme.R' 'utils-basic.R' 'utils-conditions.R' 'utils-connections.R' 'utils-debug.R' 'utils-immediateCondition.R' 'utils-marshalling.R' 'utils-objectSize.R' 'utils-options.R' 'utils-prune_pkg_code.R' 'utils-registerClusterTypes.R' 'utils-rng_utils.R' 'utils-signalEarly.R' 'utils-stealth_sample.R' 'utils-sticky_globals.R' 'utils-tweakExpression.R' 'utils-uuid.R' 'utils-whichIndex.R' 'utils_api-backtrace.R' 'utils_api-capture_journals.R' 'utils_api-futureCall.R' 'utils_api-futureSessionInfo.R' 'utils_api-makeClusterFuture.R' 'utils_api-minifuture.R' 'utils_api-nbrOfWorkers.R' 'utils_api-plan.R' 'utils_api-plan-with.R' 'utils_api-sessionDetails.R' 'utils_api-tweak.R' 'zzz.R'",
+      "NeedsCompilation": "no",
+      "Author": "Henrik Bengtsson [aut, cre, cph] (ORCID: <https://orcid.org/0000-0002-7579-5165>)",
+      "Maintainer": "Henrik Bengtsson <henrikb@braju.com>",
+      "Repository": "CRAN"
+    },
+    "future.callr": {
+      "Package": "future.callr",
+      "Version": "0.10.1",
+      "Source": "Repository",
+      "Depends": [
+        "R (>= 3.4.0)",
+        "future (>= 1.58.0)"
+      ],
+      "Imports": [
+        "parallelly",
+        "callr"
+      ],
+      "Suggests": [
+        "globals",
+        "future.apply",
+        "listenv",
+        "markdown",
+        "R.rsp"
+      ],
+      "VignetteBuilder": "R.rsp",
+      "Title": "A Future API for Parallel Processing using 'callr'",
+      "Authors@R": "c(person(\"Henrik\", \"Bengtsson\", role = c(\"aut\", \"cre\", \"cph\"), email = \"henrikb@braju.com\", comment = c(ORCID = \"0000-0002-7579-5165\")))",
+      "Description": "Implementation of the Future API <doi:10.32614/RJ-2021-048> on top of the 'callr' package.  This allows you to process futures, as defined by the 'future' package, in parallel out of the box, on your local (Linux, macOS, Windows, ...) machine.  Contrary to backends relying on the 'parallel' package (e.g. 'future::multisession') and socket connections, the 'callr' backend provided here can run more than 125 parallel R processes.",
+      "License": "LGPL (>= 2.1)",
+      "LazyLoad": "TRUE",
+      "URL": "https://future.callr.futureverse.org, https://github.com/futureverse/future.callr",
+      "BugReports": "https://github.com/futureverse/future.callr/issues",
       "Language": "en-US",
       "Encoding": "UTF-8",
       "RoxygenNote": "7.3.2",

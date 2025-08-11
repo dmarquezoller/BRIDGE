@@ -1,9 +1,11 @@
 if(!require(BRIDGE)){
+  library(devtools)
   devtools::document("R/BRIDGE")
   devtools::install("R/BRIDGE", keep_source = T, upgrade = "never")
   library(BRIDGE)  
 }
-library(future)
+#library(future)
+library(future.callr)  # or future for multisession
 library(promises)
 library(tidyverse)
 library(shiny)
@@ -12,7 +14,8 @@ library(shiny)
 
 pdf(file = NULL)
 
-future::plan(multisession, workers = 4)
+#future::plan(multisession, workers = 4)
+future::plan(future.callr::callr, workers = 4)
 set.seed(42)
 
 # Function to run the app with a command-line argument for db_path
