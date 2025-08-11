@@ -1,6 +1,7 @@
-import sqlite3
-import pandas as pd
 import os
+import sqlite3
+
+import pandas as pd
 
 ############# REQUIREMENTS OF YOUR DATA #############
 #                                                   #
@@ -13,7 +14,7 @@ import os
 #      strictly followed.                           #
 #   3. All the value columns must have an           #
 #      integer in the end specifying                #
-#      the replicate, preceeded by a "_".           #
+#      the replicate, preceded by a "_".           #
 #      No more underscores must be used in the name.#
 #      For more separations, use other symbols.     #
 #        -i.e. X6.hpf_1                             #
@@ -45,7 +46,9 @@ def prompt_column_selection(df, prompt_text):
     print("Available columns:")
     for idx, col in enumerate(df.columns):
         print(f"{idx}: {col}")
-    indices = input(f"Enter {prompt_text} numbers sepparated by commas or ranges (e.g. 1,2,3,5:10): ")
+    indices = input(
+        f"Enter {prompt_text} numbers separated by commas or ranges (e.g. 1,2,3,5:10): "
+    )
     selected = []
 
     for part in indices.split(","):
@@ -68,7 +71,14 @@ def main():
         return
 
     # === Step 2: Read CSV ===
-    df = pd.read_csv(csv_path)
+    # Auto-detect delimiter (comma or tab)
+    with open(csv_path, "r") as f:
+        first_line = f.readline()
+        if "\t" in first_line:
+            sep = "\t"
+        else:
+            sep = ","
+    df = pd.read_csv(csv_path, sep=sep)
     print(f"CSV loaded with {df.shape[0]} rows and {df.shape[1]} columns.")
 
     # === Step 3: Ask user to select identifier and timepoint columns ===
