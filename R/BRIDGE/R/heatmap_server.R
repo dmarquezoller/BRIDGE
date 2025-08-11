@@ -206,27 +206,46 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 #### END OF TESTING NON BLOCKING
 
         plot_dep_heatmap <- ExtendedTask$new(function(ht_inps) {
-            promises::future_promise({
-                dep_output <- ht_inps$dep_output
-                ht_matrix  <- ht_inps$ht_matrix
-                stored_k   <- ht_inps$stored_k
+          clustering_enabled <- ht_inps$clustering_enabled
+          tbl_name  <- ht_inps$tbl_name
+          columns <- ht_inps$columns
+          num_clusters <- ht_inps$num_clusters
+          dep_output <- ht_inps$dep_output
+          ht_matrix  <- ht_inps$ht_matrix
+          stored_k   <- ht_inps$stored_k
 
-                # Heavy part: compute optimal_k (and any big tables)
-                optimal_k <- if (is.null(stored_k)) {
-                elbow <- NbClust::NbClust(ht_matrix, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
-                as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
-                } else stored_k
+          if (clustering_enabled) {
+            dep_heatmap_key <- paste(tbl_name, columns, paste0("clusters:", num_clusters), "dep_heatmap", sep = "_")
+          } else {
+            dep_heatmap_key <- paste(tbl_name, columns, "dep_heatmap", sep = "_")
+          }
 
-                # Prepare table on worker if it’s heavy
-                dep_pg_sig <- DEP2::get_signicant(dep_output)
-                expr <- SummarizedExperiment::assay(dep_pg_sig)
-                gene_info <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
-                df <- cbind(gene_info, as.data.frame(expr))
-                df <- df[, c(colnames(gene_info), colnames(expr))]
+          # Cache check OUTSIDE future_promise:
+          if (cache$exists(dep_heatmap_key)) {
+            message("Loading DEP heatmap from cache: ", dep_heatmap_key)
+            return(promises::promise_resolve(cache$get(dep_heatmap_key)))
+          }
 
-                list(optimal_k = optimal_k, df = df)
-            })
+          # Cache miss, compute asynchronously:
+          message("Computing and caching DEP heatmap: ", dep_heatmap_key)
+          promises::future_promise({
+            optimal_k <- if (is.null(stored_k)) {
+              elbow <- NbClust::NbClust(ht_matrix, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
+              as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
+            } else stored_k
+
+            dep_pg_sig <- DEP2::get_signicant(dep_output)
+            expr <- SummarizedExperiment::assay(dep_pg_sig)
+            gene_info <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
+            df <- cbind(gene_info, as.data.frame(expr))
+            df <- df[, c(colnames(gene_info), colnames(expr))]
+
+            dep_heatmap_list <- list(optimal_k = optimal_k, df = df)
+            cache$set(dep_heatmap_key, dep_heatmap_list)
+            dep_heatmap_list
+          })
         })
+
 
         shiny::observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
           # Check clustering option
@@ -243,13 +262,14 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             dep_output = dep_output,
             ht_matrix = ht_matrix,
             tbl_name = tbl_name,
-            stored_k = stored_k
+            stored_k = stored_k,
+            columns = paste(rv$time_cols[[tbl_name]], collapse = "_")
           )
-
+          
           plot_dep_heatmap$invoke(ht_inps)
+
         })
-  
- 
+
         output[[paste0("ht_", tbl_name)]] <- shiny::renderPlot({
             res <- plot_dep_heatmap$result()
             shiny::req(res)
