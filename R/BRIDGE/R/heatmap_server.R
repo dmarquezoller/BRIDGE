@@ -145,9 +145,9 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
             list(df = df, table = df_table, pcut = pcut, fccut = fccut, datatype = datatype)
         })
-        })
+    })
 
-      shiny::observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
+    shiny::observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
         contrast <- isolate(input[[paste0("comparison_volcano_", tbl_name)]])
         pcut <- isolate(10^(-input[[paste0("volcano_pcutoff_", tbl_name)]]))
         fccut <- isolate(input[[paste0("volcano_fccutoff_", tbl_name)]])
@@ -168,9 +168,9 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         )
 
         volcano_plot$invoke(deps)
-      })
+    })
 
-      output[[paste0("volcano_", tbl_name)]] <- plotly::renderPlotly({
+    output[[paste0("volcano_", tbl_name)]] <- plotly::renderPlotly({
         res <- volcano_plot$result()
         shiny::req(res)
 
@@ -193,97 +193,128 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
         # Build plotly on main
         plotly::ggplotly(p + ggplot2::aes(x = log2FC, y = -log10(pval)), tooltip = "text")
-        })
+    })
 
-        output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
+    output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
         res <- volcano_plot$result()
         shiny::req(res)
         DT::datatable(res$table, options = list(scrollX = TRUE, pageLength = 10))
-        })
+    })
 
 
 
 #### END OF TESTING NON BLOCKING
 
-        plot_dep_heatmap <- ExtendedTask$new(function(ht_inps) {
-            promises::future_promise({
-                dep_output <- ht_inps$dep_output
-                ht_matrix  <- ht_inps$ht_matrix
-                stored_k   <- ht_inps$stored_k
+    # One reactiveVal per table to hold the latest result
+    dep_res <- reactiveVal(NULL)
 
-                # Heavy part: compute optimal_k (and any big tables)
-                optimal_k <- if (is.null(stored_k)) {
-                elbow <- NbClust::NbClust(ht_matrix, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
-                as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
-                } else stored_k
+    plot_dep_heatmap <- ExtendedTask$new(function(ht_inps) {
+        promises::future_promise({
+            ht_matrix  <- ht_inps$ht_matrix
+            dep_output <- ht_inps$dep_output
+            stored_k   <- ht_inps$stored_k
+            optimal_k <- if (is.null(stored_k)) {
+            elbow <- NbClust::NbClust(ht_matrix, distance = "euclidean",
+                                        min.nc = 2, max.nc = 10, method = "kmeans")
+            as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
+            } else stored_k
 
-                # Prepare table on worker if it’s heavy
-                dep_pg_sig <- DEP2::get_signicant(dep_output)
-                expr <- SummarizedExperiment::assay(dep_pg_sig)
-                gene_info <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
-                df <- cbind(gene_info, as.data.frame(expr))
-                df <- df[, c(colnames(gene_info), colnames(expr))]
+            dep_pg_sig <- DEP2::get_signicant(dep_output)
+            expr       <- SummarizedExperiment::assay(dep_pg_sig)
+            gene_info  <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
+            df         <- cbind(gene_info, as.data.frame(expr))
+            df         <- df[, c(colnames(gene_info), colnames(expr))]
 
-                list(optimal_k = optimal_k, df = df)
-            })
+            list(optimal_k = optimal_k, df = df)
         })
-
-        shiny::observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
-          # Check clustering option
-          clustering_enabled <- isolate(input[[paste0("clustering_", tbl_name)]])
-          num_clusters <- isolate(input[[paste0("num_clusters_", tbl_name)]])
-          dep_output <- isolate(rv$dep_output[[tbl_name]])
-          ht_matrix <- isolate(rv$ht_matrix[[tbl_name]])
-          ht_matrix <- isolate(rv$ht_matrix[[tbl_name]])
-          stored_k <- isolate(rv$optimal_k_individual[[tbl_name]])
-
-          ht_inps <- list(
-            clustering_enabled = clustering_enabled,
-            num_clusters = num_clusters,
-            dep_output = dep_output,
-            ht_matrix = ht_matrix,
-            tbl_name = tbl_name,
-            stored_k = stored_k
-          )
-
-          plot_dep_heatmap$invoke(ht_inps)
-        })
-  
- 
-        output[[paste0("ht_", tbl_name)]] <- shiny::renderPlot({
-            res <- plot_dep_heatmap$result()
-            shiny::req(res)
-            clustering_enabled <- isolate(input[[paste0("clustering_", tbl_name)]])
-            num_clusters       <- isolate(input[[paste0("num_clusters_", tbl_name)]])
-            dep_output         <- isolate(rv$dep_output[[tbl_name]])
-
-            if (clustering_enabled) {
-                DEP2::plot_heatmap(dep_output, kmeans = TRUE, k = num_clusters)
-            } else {
-                DEP2::plot_heatmap(dep_output)
-            }
-        })
-
-        output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
-            res <- plot_dep_heatmap$result()
-            shiny::req(res)
-            DT::datatable(res$df, options = list(scrollX = TRUE, pageLength = 10))
-        })
-
-        output[[paste0("optimal_k", tbl_name)]] <- renderUI({
-            res <- plot_dep_heatmap$result()
-            shiny::req(res)
-            if (is.null(rv$optimal_k_individual[[tbl_name]])) {
-                rv$optimal_k_individual[[tbl_name]] <- res$optimal_k
-            }
-            htmltools::tagList(
-                shiny::tags$ul(
-                shiny::tags$li(paste("The optimal k for this table following the elbow rule is:", res$optimal_k))
-                )
-            )
-        })      
     })
+
+
+    observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
+        clustering_enabled <- isolate(input[[paste0("clustering_", tbl_name)]])
+        num_clusters       <- isolate(input[[paste0("num_clusters_", tbl_name)]])
+        dep_output         <- isolate(rv$dep_output[[tbl_name]])
+        ht_matrix          <- isolate(rv$ht_matrix[[tbl_name]])
+        stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
+        columns_key        <- paste(rv$time_cols[[tbl_name]], collapse = "_")
+
+        key <- if (isTRUE(clustering_enabled)) {
+            paste(tbl_name, columns_key, paste0("clusters:", num_clusters), "dep_heatmap", sep = "_")
+        } else {
+            paste(tbl_name, columns_key, "dep_heatmap", sep = "_")
+        }
+        rv$current_dep_heatmap_key[[tbl_name]] <- key  # stash the key for renderers
+
+        if (cache$exists(key)) {
+            # Cached: nothing to compute; renderers will read from cache below.
+            message("Loading DEP heatmap from cache: ", key)
+        } else {
+            message("Computing and caching DEP heatmap: ", key)
+            plot_dep_heatmap$invoke(list(
+            dep_output = dep_output,
+            ht_matrix  = ht_matrix,
+            stored_k   = stored_k
+            ))
+        }
+    }, ignoreInit = TRUE)
+
+    # Helper to fetch the value either from cache or from the task result
+    get_dep_result <- function(tbl_name) {
+        key <- rv$current_dep_heatmap_key[[tbl_name]]
+        if (!is.null(key) && cache$exists(key)) {
+            return(cache$get(key))
+        }
+        # not cached yet — if the task finished, result() will be non-NULL
+        plot_dep_heatmap$result()
+    }
+
+    # Renderers: read result reactively; write to cache on the main thread once
+    output[[paste0("ht_", tbl_name)]] <- shiny::renderPlot({
+        # Ensure inputs used to build the plot are present (and for cache key)
+        clustering_enabled <- input[[paste0("clustering_", tbl_name)]]
+        num_clusters       <- input[[paste0("num_clusters_", tbl_name)]]
+        dep_output         <- rv$dep_output[[tbl_name]]
+        req(dep_output)  # avoid early NULLs
+
+        res <- get_dep_result(tbl_name)
+        req(res)  # wait until we actually have data
+
+        # Cache-once guard
+        key <- rv$current_dep_heatmap_key[[tbl_name]]
+        if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+
+        # Build plot on main process
+        if (isTRUE(clustering_enabled)) {
+            DEP2::plot_heatmap(dep_output, kmeans = TRUE, k = num_clusters)
+        } else {
+            DEP2::plot_heatmap(dep_output)
+        }
+    })
+
+    output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
+        res <- get_dep_result(tbl_name)
+        req(res)
+        key <- rv$current_dep_heatmap_key[[tbl_name]]
+        if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+
+        DT::datatable(res$df, options = list(scrollX = TRUE, pageLength = 10))
+    })
+
+    output[[paste0("optimal_k", tbl_name)]] <- renderUI({
+        res <- get_dep_result(tbl_name)
+        req(res)
+        key <- rv$current_dep_heatmap_key[[tbl_name]]
+        if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+
+        if (is.null(rv$optimal_k_individual[[tbl_name]])) {
+            rv$optimal_k_individual[[tbl_name]] <- res$optimal_k
+        }
+        htmltools::tagList(
+            shiny::tags$ul(
+            shiny::tags$li(paste("The optimal k for this table following the elbow rule is:", res$optimal_k))
+            )
+        )
+    }) # End of lapply for each table
   })
+  }) # End of moduleServer
 }
-
-
