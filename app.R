@@ -12,11 +12,12 @@ library(shiny)
 #library(shinydashboard)
 #library(shinyWidgets)
 
-pdf(file = NULL)
+# pdf(file = NULL)  # delete, can trigger Warning: CallrFuture (<unnamed-6>) added, removed, or modified devices. A future expression must close any opened devices and must not close devices it did not open. Details: 1 devices differ: index=2, before=‘NA’, after=‘pdf’. See also help("future.options", package = "future")
 
 #future::plan(multisession, workers = 4)
 future::plan(future.callr::callr, workers = 4)
 set.seed(42)
+options(future.seed = TRUE)
 
 # Function to run the app with a command-line argument for db_path
 bridge <- function() {

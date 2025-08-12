@@ -4,7 +4,8 @@ dep2_proteomics <- function(df, tbl_name, rv) {
   ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_pg))
   se_pg <- DEP2::make_se_parse(unique_pg, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
   filter_pg <- DEP2::filter_se(se_pg, thr = 1, fraction = 0.3)
-  norm_pg <- DEP2::normalize_vsn(filter_pg)
+  impute_pg <- DEP2::impute(filter_pg, fun = "MinDet")
+  norm_pg <- DEP2::normalize_vsn(impute_pg)
   diff_pg <- DEP2::test_diff(norm_pg, type = "all", fdr.type = "BH")
   return(diff_pg)
 }
@@ -16,7 +17,8 @@ dep2_phosphoproteomics <- function(df, tbl_name, rv) {
   ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_phos))
   se_phos <- DEP2::make_se_parse(unique_phos, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
   filter_phos <- DEP2::filter_se(se_phos)
-  norm_phos <- DEP2::normalize_vsn(filter_phos)
+  impute_phos <- DEP2::impute(filter_phos, fun = "MinDet")
+  norm_phos <- DEP2::normalize_vsn(impute_phos)
   diff_phos <- DEP2::test_diff(norm_phos, type = "all", fdr.type = "BH")
   return(diff_phos)
 }
@@ -29,6 +31,7 @@ dep2_rnaseq <- function(df, tbl_name, rv) {
   rownames(data_mat) <- unique_dds$Gene_ID
   dds <- DEP2::make_dds_parse(data_mat, mode = "delim", sep = "_")
   dds <- DEP2::filter_se(dds, fraction = 0.3, thr = 1)
+  dds <- DEP2::impute(dds, fun = "MinDet")
   diff <- DEP2::test_diff_deg(dds, type = 'all')
   return(diff)
 }
