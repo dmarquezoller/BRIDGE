@@ -117,29 +117,29 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             res <- SummarizedExperiment::rowData(dep_output)
 
             if (datatype == "proteomics") {
-            df <- data.frame(
-                gene_names = stringr::str_to_title(res$Gene_Name),
-                pval       = res[[pval_col]],
-                log2FC     = res[[lfc_col]],
-                stringsAsFactors = FALSE
+                df <- data.frame(
+                    gene_names = stringr::str_to_title(res$Gene_Name),
+                    pval       = res[[pval_col]],
+                    log2FC     = res[[lfc_col]],
+                    stringsAsFactors = FALSE
             )
             sig_se   <- DEP2::get_signicant(dep_output, contrast)
             df_table <- DEP2::get_results(sig_se)
             } else if (datatype == "phosphoproteomics") {
-            df <- data.frame(
-                peptide = res$pepG,
-                pval    = res[[pval_col]],
-                log2FC  = res[[lfc_col]],
-                stringsAsFactors = FALSE
+                df <- data.frame(
+                    peptide = res$pepG,
+                    pval    = res[[pval_col]],
+                    log2FC  = res[[lfc_col]],
+                    stringsAsFactors = FALSE
             )
             sig_se   <- DEP2::get_signicant(dep_output, contrast)
             df_table <- DEP2::get_results(sig_se)
             } else { # rnaseq
-            df <- data.frame(
-                gene_ID = rownames(res),
-                pval    = res[[pval_col]],
-                log2FC  = res[[lfc_col]],
-                stringsAsFactors = FALSE
+                df <- data.frame(
+                    gene_ID = rownames(res),
+                    pval    = res[[pval_col]],
+                    log2FC  = res[[lfc_col]],
+                    stringsAsFactors = FALSE
             )
             df_table <- DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
             }
@@ -150,7 +150,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
     shiny::observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
         contrast <- isolate(input[[paste0("comparison_volcano_", tbl_name)]])
-        pcut <- isolate(10^(-input[[paste0("volcano_pcutoff_", tbl_name)]]))
+        pcut <- isolate((input[[paste0("volcano_pcutoff_", tbl_name)]]))
         fccut <- isolate(input[[paste0("volcano_fccutoff_", tbl_name)]])
         highlight <- isolate(input[[paste0("volcano_search_", tbl_name)]]) %>%
           str_split(",", simplify = TRUE) %>%
@@ -161,7 +161,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
 
         deps <- list(
           contrast = contrast,
-          pcut = pcut,
+          pcut = 10^(-pcut),
           fccut = fccut,
           highlight = highlight,
           dep_output = dep_output,
@@ -215,7 +215,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
     # One reactiveVal per table to hold the latest result
     dep_res <- reactiveVal(NULL)
 
-    plot_dep_heatmap <- ExtendedTask$new(function(ht_inps) {
+    create_dep_heatmap <- ExtendedTask$new(function(ht_inps) {
         promises::future_promise({
             ht_matrix  <- ht_inps$ht_matrix
             dep_output <- ht_inps$dep_output
@@ -231,7 +231,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             gene_info  <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
             df         <- cbind(gene_info, as.data.frame(expr))
             df         <- df[, c(colnames(gene_info), colnames(expr))]
-
+            df         <- na.omit(df)
             list(optimal_k = optimal_k, df = df)
         })
     })
@@ -245,11 +245,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
         columns_key        <- paste(rv$time_cols[[tbl_name]], collapse = "_")
 
-        key <- if (isTRUE(clustering_enabled)) {
-            paste(tbl_name, columns_key, paste0("clusters:", num_clusters), "dep_heatmap", sep = "_")
-        } else {
-            paste(tbl_name, columns_key, "dep_heatmap", sep = "_")
-        }
+        key <- paste(tbl_name, columns_key, "dep_heatmap", sep = "_")
         rv$current_dep_heatmap_key[[tbl_name]] <- key  # stash the key for renderers
 
         if (cache$exists(key)) {
@@ -257,10 +253,10 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             message("Loading DEP heatmap from cache: ", key)
         } else {
             message("Computing and caching DEP heatmap: ", key)
-            plot_dep_heatmap$invoke(list(
-            dep_output = dep_output,
-            ht_matrix  = ht_matrix,
-            stored_k   = stored_k
+            create_dep_heatmap$invoke(list(
+                dep_output = dep_output,
+                ht_matrix  = ht_matrix,
+                stored_k   = stored_k
             ))
         }
     }, ignoreInit = TRUE)
@@ -272,7 +268,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             return(cache$get(key))
         }
         # not cached yet — if the task finished, result() will be non-NULL
-        plot_dep_heatmap$result()
+        create_dep_heatmap$result()
     }
 
     # Renderers: read result reactively; write to cache on the main thread once

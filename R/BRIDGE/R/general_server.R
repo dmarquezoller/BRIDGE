@@ -233,7 +233,7 @@ server_function <- function(input, output, session, db_path){
                            shiny::selectizeInput(paste0("volcano_search_",tbl_name), "Search for Gene:",  choices = NULL, multiple=T),
                            shinyWidgets::chooseSliderSkin("Flat", color="#3d8dbc"),
                            shiny::numericInput(paste0("volcano_pcutoff_", tbl_name), "FDR Threshold:", 
-                                       min = 0, max = 10, value = 1.3, step = 0.1),
+                                       min = 0, max = 10, value = 0.05, step = 0.01),
                            shiny::numericInput(paste0("volcano_fccutoff_", tbl_name), "FC Threshold:", 
                                        min = 0, max = 10, value = 1, step = 0.1),
                            shinyWidgets::actionBttn(paste0("compute_volcano_", tbl_name), shiny::span("Compute  Volcano", style = "color: white;"), style = "simple", color = "primary", size = "sm")

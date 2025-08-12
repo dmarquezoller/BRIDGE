@@ -27,7 +27,7 @@ raw_heatmap_ui <-function(tbl_name) {
                               h1(), 
                               shinyWidgets::actionBttn(paste0("compute_raw_ht_", tbl_name), shiny::span("Compute Raw Heatmap", style = "color: white;"), style = "simple", color = "primary", size = "sm"),
                               h3(),
-                              p("Have in mind that for big heatmaps it may take long.")
+                              p("Might take long for first time computation.")
                             )
                           )
                         )
