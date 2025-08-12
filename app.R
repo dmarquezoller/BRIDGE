@@ -12,7 +12,6 @@ library(shiny)
 #library(shinydashboard)
 #library(shinyWidgets)
 
-pdf(file = NULL)
 
 #future::plan(multisession, workers = 4)
 future::plan(future.callr::callr, workers = 4)
