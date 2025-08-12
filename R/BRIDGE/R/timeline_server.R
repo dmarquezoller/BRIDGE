@@ -49,7 +49,7 @@ timeline_server <- function(input, output, session, rv) {
         summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
       
       output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
-        DT::datatable(data)
+        DT::datatable(data, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
       })
       
       
@@ -132,7 +132,7 @@ timeline_server <- function(input, output, session, rv) {
           summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
         
         output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
-          DT::datatable(data)
+          DT::datatable(data, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
         })
         
         output[[paste0("time_plot_",tbl_name)]] <- shiny::renderPlot({

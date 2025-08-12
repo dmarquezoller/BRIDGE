@@ -207,7 +207,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
     output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
         res <- volcano_plot$result()
         shiny::req(res)
-        DT::datatable(res$table, options = list(scrollX = TRUE, pageLength = 10))
+        DT::datatable(res$table, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
     })
 
 
@@ -305,7 +305,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         key <- rv$current_dep_heatmap_key[[tbl_name]]
         if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
 
-        DT::datatable(res$df, options = list(scrollX = TRUE, pageLength = 10))
+        DT::datatable(res$df, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
     })
 
     output[[paste0("optimal_k", tbl_name)]] <- renderUI({

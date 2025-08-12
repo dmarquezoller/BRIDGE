@@ -193,7 +193,7 @@ integration_ui <- function(input, output, session, rv) {
             output_id <- paste0("processed_tbl_", table_name)
             data <- as.data.frame(rv$intersected_tables_processed[[table_name]])
             output[[output_id]] <- DT::renderDT({
-                DT::datatable(data, options = list(scrollX = TRUE, pageLength = 5))
+                DT::datatable(data, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 5, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
             })
             })
         })
@@ -293,7 +293,7 @@ integration_ui <- function(input, output, session, rv) {
         )
     }
 
-    DT::datatable(combined_data(), options = list(scrollX = TRUE, pageLength = 10))
+    DT::datatable(combined_data(), extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
     })
 
 

@@ -291,7 +291,7 @@ server_function <- function(input, output, session, db_path){
   shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
       output[[paste0("table_", tbl_name)]] <- DT::renderDT({
-        DT::datatable(rv$tables[[tbl_name]],options = list(scrollX = TRUE, pageLength = 10))
+        DT::datatable(rv$tables[[tbl_name]], extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
       })
     })
   })
