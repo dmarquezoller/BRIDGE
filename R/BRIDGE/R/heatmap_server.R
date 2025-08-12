@@ -92,9 +92,11 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
       lfcut <- input[[paste0("volcano_fccutoff_", tbl_name)]]
 
       dep_output <- DEP2::add_rejections(dep_output, alpha = 10^-pcut, lfc = lfcut)
+      dep_output <- DEP2::impute(dep_output, fun = "MinDet")
       rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
       sig_cols <- grep("_significant$", rd_names, value = TRUE)
-      valid_contrasts <- sub("_significant$", "", sig_cols)  
+      valid_contrasts <- sub("_significant$", "", sig_cols) 
+
       #Isolate function to avoid retriggering the shiny::observe block
       isolate({ 
         rv$dep_output[[tbl_name]] <- dep_output
@@ -245,7 +247,11 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
         columns_key        <- paste(rv$time_cols[[tbl_name]], collapse = "_")
 
-        key <- paste(tbl_name, columns_key, "dep_heatmap", sep = "_")
+        key <- if (isTRUE(clustering_enabled)) {
+            paste(tbl_name, columns_key, paste0("clusters:", num_clusters), "dep_heatmap", sep = "_")
+        } else {
+            paste(tbl_name, columns_key, "dep_heatmap", sep = "_")
+        }
         rv$current_dep_heatmap_key[[tbl_name]] <- key  # stash the key for renderers
 
         if (cache$exists(key)) {
@@ -285,7 +291,6 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         # Cache-once guard
         key <- rv$current_dep_heatmap_key[[tbl_name]]
         if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-
         # Build plot on main process
         if (isTRUE(clustering_enabled)) {
             DEP2::plot_heatmap(dep_output, kmeans = TRUE, k = num_clusters)
