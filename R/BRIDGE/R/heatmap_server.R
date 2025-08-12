@@ -110,6 +110,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             datatype   <- deps$datatype
             pcut       <- deps$pcut
             fccut      <- deps$fccut
+            highlight  <- deps$highlight
 
             lfc_col <- paste0(contrast, "_diff")
             pval_col <- paste0(contrast, "_p.adj")
@@ -143,7 +144,7 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
             df_table <- DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
             }
 
-            list(df = df, table = df_table, pcut = pcut, fccut = fccut, datatype = datatype)
+            list(df = df, table = df_table, pcut = pcut, fccut = fccut, datatype = datatype, highlight = highlight)
         })
     })
 
@@ -175,20 +176,26 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         shiny::req(res)
 
         if (res$datatype == "proteomics") {
+            text_col <- res$df$gene_names
+            highlight <- res$highlight
             p <- EnhancedVolcano::EnhancedVolcano(
-            res$df, lab = res$df$gene_names, x = "log2FC", y = "pval",
-            title = "", pCutoff = res$pcut, FCcutoff = res$fccut, legendPosition = "none"
-            )
+            res$df, lab = res$df$gene_names, selectLab = c("a"), x = "log2FC", y = "pval",
+            title = "", pCutoff = res$pcut, FCcutoff = res$fccut, pointSize = ifelse(text_col %in% highlight, 3, 1),legendPosition = "none"
+            ) + ggplot2::aes(text = gene_names) + ggplot2::labs(color="Legend")
         } else if (res$datatype == "phosphoproteomics") {
+            text_col <- res$df$peptide
+            highlight <- res$highlight
             p <- EnhancedVolcano::EnhancedVolcano(
-            res$df, lab = res$df$peptide, x = "log2FC", y = "pval",
-            title = "", pCutoff = res$pcut, FCcutoff = res$fccut, legendPosition = "none"
-            )
+            res$df, lab = res$df$peptide, selectLab = c("a"), x = "log2FC", y = "pval",
+            title = "", pCutoff = res$pcut, FCcutoff = res$fccut, pointSize = ifelse(text_col %in% highlight, 3, 1), legendPosition = "none"
+            ) + ggplot2::aes(text = peptide) + ggplot2::labs(color="Legend")
         } else {
+            text_col <- res$df$gene_ID
+            highlight <- res$highlight
             p <- EnhancedVolcano::EnhancedVolcano(
-            res$df, lab = res$df$gene_ID, x = "log2FC", y = "pval",
-            title = "", pCutoff = res$pcut, FCcutoff = res$fccut, legendPosition = "none"
-            )
+            res$df, lab = res$df$gene_ID, selectLab = c("a"), x = "log2FC", y = "pval",
+            title = "", pCutoff = res$pcut, FCcutoff = res$fccut, pointSize = ifelse(text_col %in% highlight, 3, 1), legendPosition = "none"
+            ) + ggplot2::aes(text = gene_ID) + ggplot2::labs(color="Legend")
         }
 
         # Build plotly on main
