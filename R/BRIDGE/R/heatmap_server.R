@@ -86,13 +86,6 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         }
         cache$set(cache_key, dep_output)
       }
-
-     shiny::req(input[[paste0("volcano_pcutoff_", tbl_name)]],  input[[paste0("volcano_fccutoff_", tbl_name)]])
-      pcut <- input[[paste0("volcano_pcutoff_", tbl_name)]]
-      lfcut <- input[[paste0("volcano_fccutoff_", tbl_name)]]
-
-      dep_output <- DEP2::add_rejections(dep_output, alpha = 10^-pcut, lfc = lfcut)
-      dep_output <- DEP2::impute(dep_output, fun = "MinDet")
       rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
       sig_cols <- grep("_significant$", rd_names, value = TRUE)
       valid_contrasts <- sub("_significant$", "", sig_cols) 
