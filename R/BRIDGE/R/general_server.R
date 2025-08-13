@@ -140,6 +140,7 @@ server_function <- function(input, output, session, db_path){
 
     annotation_data <- DBI::dbGetQuery(con, annotation, )
     table_id <- input$selected_table
+
     
     datatype <- strsplit(input$selected_table, "_")[[1]][2]
     if (!(table_id %in% rv$table_names)) {
@@ -154,6 +155,32 @@ server_function <- function(input, output, session, db_path){
       rv$annotation[[table_id]] <- annotation_data
       
     }
+
+    cache_key <- paste(table_id, paste(rv$time_cols[[table_id]], collapse = "_"), "dep", sep = "_")
+    print(paste("Running analysis for:", table_id, "datatype:", rv$datatype[[table_id]]))
+
+      # Recompute heatmap if the button is clicked
+
+    if (cache$exists(cache_key)) {
+        message("Loading DEP output from cache: ", cache_key)
+        dep_output <- cache$get(cache_key)
+    } else {
+        message("Computing and caching DEP output: ", cache_key)
+        if (rv$datatype[[table_id]] == 'proteomics') {
+          dep_output <- dep2_proteomics(rv$tables[[table_id]], table_id, rv)
+        } else if (rv$datatype[[table_id]] == 'phosphoproteomics') {
+          dep_output <- dep2_phosphoproteomics(rv$tables[[table_id]], table_id, rv)
+        } else if (rv$datatype[[table_id]] == 'rnaseq') {
+          dep_output <- dep2_rnaseq(rv$tables[[table_id]], table_id, rv)
+        }
+        cache$set(cache_key, dep_output)
+    }
+    rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
+    sig_cols <- grep("_significant$", rd_names, value = TRUE)
+    valid_contrasts <- sub("_significant$", "", sig_cols) 
+    rv$dep_output[[table_id]] <- dep_output
+    rv$contrasts[[table_id]] <- valid_contrasts
+       
   })
   
   # DELETE DATA SELECTOR

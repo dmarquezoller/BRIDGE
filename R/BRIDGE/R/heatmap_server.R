@@ -66,35 +66,6 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
     lapply(rv$table_names, function(tbl_name) {
       updateSelectizeInput(session, paste0("volcano_search_",tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
       updateSelectizeInput(session, paste0("search_gene_", tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
-      time_cols_hash <- rv$time_cols[[tbl_name]]
-      cache_key <- paste(tbl_name, paste(rv$time_cols[[tbl_name]], collapse = "_"), "dep", sep = "_")
-      print(paste("Running analysis for:", tbl_name, "datatype:", rv$datatype[[tbl_name]]))
-
-      # Recompute heatmap if the button is clicked
-
-      if (cache$exists(cache_key)) {
-        message("Loading DEP output from cache: ", cache_key)
-        dep_output <- cache$get(cache_key)
-      } else {
-        message("Computing and caching DEP output: ", cache_key)
-        if (rv$datatype[[tbl_name]] == 'proteomics') {
-          dep_output <- dep2_proteomics(rv$tables[[tbl_name]], tbl_name, rv)
-        } else if (rv$datatype[[tbl_name]] == 'phosphoproteomics') {
-          dep_output <- dep2_phosphoproteomics(rv$tables[[tbl_name]], tbl_name, rv)
-        } else if (rv$datatype[[tbl_name]] == 'rnaseq') {
-          dep_output <- dep2_rnaseq(rv$tables[[tbl_name]], tbl_name, rv)
-        }
-        cache$set(cache_key, dep_output)
-      }
-      rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
-      sig_cols <- grep("_significant$", rd_names, value = TRUE)
-      valid_contrasts <- sub("_significant$", "", sig_cols) 
-
-      #Isolate function to avoid retriggering the shiny::observe block
-      isolate({ 
-        rv$dep_output[[tbl_name]] <- dep_output
-        rv$contrasts[[tbl_name]] <- valid_contrasts
-      })  
 
 #### TESTING NON BLOCKING
 
