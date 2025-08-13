@@ -59,267 +59,526 @@ raw_heatmap_server <- function(input, output, session, rv) {
 #'   rv$tables[[tbl]], rv$time_cols[[tbl]], rv$datatype[[tbl]]
 #'   rv$ht_matrix[[tbl]], rv$optimal_k_individual[[tbl]]
 #' @export
-dep_heatmap_server <- function(input, output, session, rv, cache) {
+dep_heatmap_server <- function(input, output, session, rv, cache, db_path) {
 
-  # 0) Register everything once we know the table names
-  shiny::observeEvent(rv$table_names, {
-    tbls <- isolate(rv$table_names)
-    req(length(tbls) > 0)
-    message("dep_heatmap_server: registering handlers for tables: ",
-            paste(tbls, collapse = ", "))
+    # Track which tables have handlers registered
+    registered <- reactiveVal(character())
 
-    lapply(tbls, function(.tbl) local({
-      tbl_name <- .tbl
-      message("[", tbl_name, "] init")
+    # Safe single numeric reader
+    .read_num <- function(x) {
+        if (is.null(x) || length(x) != 1) return(NA_real_)
+        y <- suppressWarnings(as.numeric(x))
+        if (length(y) != 1) return(NA_real_)
+        y
+    }
 
-      # ---- 1) One-time UI setup when data appears ----
-      shiny::observeEvent(rv$tables[[tbl_name]], ignoreInit = FALSE, once = TRUE, {
-        message("[", tbl_name, "] UI selectize init")
-        updateSelectizeInput(
-          session, paste0("volcano_search_", tbl_name),
-          choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE
-        )
-        updateSelectizeInput(
-          session, paste0("search_gene_", tbl_name),
-          choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE
-        )
-      })
+    # returns TRUE if x is an env/func we must drop
+    .is_bad <- function(x) is.environment(x) || is.function(x)
 
-      # ---- 2) Base DEP output per table (compute/load) ----
-      dep_base <- shiny::reactiveVal(NULL)  # SummarizedExperiment with stats etc.
-
-      # Cache key depends only on data/time cols/datatype (NOT on cutoffs)
-      base_key <- shiny::reactive({
-        cols_key <- paste(isolate(rv$time_cols[[tbl_name]]), collapse = "_")
-        paste("DEPBASE", tbl_name, cols_key, isolate(rv$datatype[[tbl_name]]), sep = "_")
-      })
-
-      shiny::observeEvent(
-        list(rv$tables[[tbl_name]], rv$time_cols[[tbl_name]], rv$datatype[[tbl_name]]),
-        {
-          key <- base_key()
-          dt  <- isolate(rv$datatype[[tbl_name]])
-          dat <- isolate(rv$tables[[tbl_name]])
-          req(!is.null(dat), !is.null(dt))
-
-          if (cache$exists(key)) {
-            message("[", tbl_name, "] load DEP base from cache: ", key)
-            dep_out <- cache$get(key)
-          } else {
-            message("[", tbl_name, "] compute DEP base: ", key, " (", dt, ")")
-            dep_out <- switch(dt,
-              proteomics        = dep2_proteomics(dat, tbl_name, rv),
-              phosphoproteomics = dep2_phosphoproteomics(dat, tbl_name, rv),
-              rnaseq            = dep2_rnaseq(dat, tbl_name, rv),
-              stop("[", tbl_name, "] unknown datatype: ", dt)
-            )
-            cache$set(key, dep_out)
-          }
-
-          dep_base(dep_out)                  # make it reactive for this table
-          rv$dep_output[[tbl_name]] <- dep_out  # keep your existing field updated
-
-          # valid contrasts once per dep_out
-          rd_names <- colnames(SummarizedExperiment::rowData(dep_out))
-          sig_cols <- grep("_significant$", rd_names, value = TRUE)
-          rv$contrasts[[tbl_name]] <- sub("_significant$", "", sig_cols)
-
-          message("[", tbl_name, "] DEP base ready; contrasts: ",
-                  paste(rv$contrasts[[tbl_name]], collapse = ", "))
-        },
-        ignoreInit = FALSE
-      )
-
-      # =====================================================
-      # 3) VOLCANO — heavy compute -> future, store to rv
-      # =====================================================
-      volcano_res <- shiny::reactiveVal(NULL)
-
-      shiny::observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
-        message("[", tbl_name, "] compute_volcano clicked")
-        dep_out <- dep_base(); shiny::req(dep_out)  # ensure base is there
-
-        deps <- list(
-          contrast   = isolate(input[[paste0("comparison_volcano_", tbl_name)]]),
-          pcut       = 10^(-isolate(input[[paste0("volcano_pcutoff_", tbl_name)]])),
-          fccut      = isolate(input[[paste0("volcano_fccutoff_", tbl_name)]]),
-          dep_output = dep_out,
-          datatype   = isolate(rv$datatype[[tbl_name]])
-        )
-        shiny::req(!is.null(deps$contrast))
-
-        promises::future_promise({
-          lfc_col  <- paste0(deps$contrast, "_diff")
-          pval_col <- paste0(deps$contrast, "_p.adj")
-
-          res <- SummarizedExperiment::rowData(
-            DEP2::add_rejections(deps$dep_output, alpha = deps$pcut, lfc = deps$fccut)
-          )
-
-          if (deps$datatype == "proteomics") {
-            df <- data.frame(
-              gene_names = stringr::str_to_title(res$Gene_Name),
-              pval = res[[pval_col]], log2FC = res[[lfc_col]], stringsAsFactors = FALSE
-            )
-            df_table <- DEP2::get_results(DEP2::get_signicant(deps$dep_output, deps$contrast))
-          } else if (deps$datatype == "phosphoproteomics") {
-            df <- data.frame(
-              peptide = res$pepG,
-              pval = res[[pval_col]], log2FC = res[[lfc_col]], stringsAsFactors = FALSE
-            )
-            df_table <- DEP2::get_results(DEP2::get_signicant(deps$dep_output, deps$contrast))
-          } else {
-            df <- data.frame(
-              gene_ID = rownames(res),
-              pval = res[[pval_col]], log2FC = res[[lfc_col]], stringsAsFactors = FALSE
-            )
-            df_table <- DEP2::get_results(DEP2::get_signicant(deps$dep_output, deps$contrast))
-          }
-
-          list(df = df, table = df_table, pcut = deps$pcut, fccut = deps$fccut, datatype = deps$datatype)
-        }, seed = TRUE) %...>% (function(value) {
-          message("[", tbl_name, "] volcano future resolved (n=", nrow(value$df), ")")
-          volcano_res(value)
-        }) %...!% (function(e) {
-          showNotification(conditionMessage(e), type = "error")
-          message("[", tbl_name, "] volcano error: ", conditionMessage(e))
-        })
-      }, ignoreInit = TRUE)
-
-      output[[paste0("volcano_", tbl_name)]] <- plotly::renderPlotly({
-        res <- volcano_res(); shiny::req(res)
-
-        # lightweight UI bits that should re-draw plot without recomputing:
-        hl <- input[[paste0("volcano_search_", tbl_name)]] |>
-          stringr::str_split(",", simplify = TRUE) |>
-          stringr::str_trim() |>
-          stringr::str_to_title()
-
-        if (res$datatype == "proteomics") {
-          text_col <- res$df$gene_names
-          p <- EnhancedVolcano::EnhancedVolcano(
-            res$df, lab = res$df$gene_names, selectLab = c("a"),
-            x = "log2FC", y = "pval", title = "",
-            pCutoff = res$pcut, FCcutoff = res$fccut,
-            pointSize = ifelse(text_col %in% hl, 3, 1),
-            legendPosition = "none"
-          ) + ggplot2::aes(text = gene_names) + ggplot2::labs(color = "Legend")
-        } else if (res$datatype == "phosphoproteomics") {
-          text_col <- res$df$peptide
-          p <- EnhancedVolcano::EnhancedVolcano(
-            res$df, lab = res$df$peptide, selectLab = c("a"),
-            x = "log2FC", y = "pval", title = "",
-            pCutoff = res$pcut, FCcutoff = res$fccut,
-            pointSize = ifelse(text_col %in% hl, 3, 1),
-            legendPosition = "none"
-          ) + ggplot2::aes(text = peptide) + ggplot2::labs(color = "Legend")
+    # strip envs/funs in a generic object
+    sanitize_for_cache <- function(x) {
+    if (.is_bad(x)) return(NULL)
+    if (is.list(x)) {
+        y <- lapply(x, sanitize_for_cache)
+        # drop NULLs while preserving names/order
+        if (!is.null(names(y))) {
+            y <- y[!vapply(y, is.null, logical(1))]
         } else {
-          text_col <- res$df$gene_ID
-          p <- EnhancedVolcano::EnhancedVolcano(
-            res$df, lab = res$df$gene_ID, selectLab = c("a"),
-            x = "log2FC", y = "pval", title = "",
-            pCutoff = res$pcut, FCcutoff = res$fccut,
-            pointSize = ifelse(text_col %in% hl, 3, 1),
-            legendPosition = "none"
-          ) + ggplot2::aes(text = gene_ID) + ggplot2::labs(color = "Legend")
+           keep <- !vapply(y, is.null, logical(1))
+          y <- y[keep]
+        }
+        return(y)
+    }
+    x
+    }
+
+    # sanitize a DataFrame (rowData/colData): list-columns & metadata()
+    sanitize_DataFrame <- function(df) {
+        # 1) list-columns: drop env/func elements
+        for (nm in colnames(df)) {
+            col <- df[[nm]]
+            if (is.list(col)) {
+            col <- lapply(col, function(el) if (.is_bad(el)) NULL else el)
+            # keep length (replace NULLs by NA_character_ to keep rectangular)
+            nulls <- vapply(col, is.null, logical(1))
+            if (any(nulls)) {
+                # pick a sensible NA type based on the first non-NULL element
+                first_good <- which(!nulls)[1]
+                if (is.na(first_good)) {
+                # all NULL: make it logical NA column
+                col <- rep(NA, nrow(df))
+                } else {
+                proto <- col[[first_good]]
+                if (is.numeric(proto))      col[nulls] <- list(NA_real_)
+                else if (is.integer(proto)) col[nulls] <- list(NA_integer_)
+                else if (is.logical(proto)) col[nulls] <- list(NA)
+                else                        col[nulls] <- list(NA_character_)
+                col <- I(col)  # keep as list-column
+                }
+            } else {
+                col <- I(col)
+            }
+            df[[nm]] <- col
+            }
+        }
+        # 2) metadata() on the DataFrame itself
+        md <- S4Vectors::metadata(df)
+        md <- sanitize_for_cache(md)
+        S4Vectors::metadata(df) <- md
+        df
+    }
+
+    # full SE sanitizer: top-level metadata + rowData/colData + (optional) rowRanges metadata
+    sanitize_SE <- function(se) {
+        # A) top-level metadata
+        md <- S4Vectors::metadata(se)
+        md <- sanitize_for_cache(md)
+        S4Vectors::metadata(se) <- md
+
+        # B) rowData / colData
+        rd <- SummarizedExperiment::rowData(se)
+        cd <- SummarizedExperiment::colData(se)
+        rd <- sanitize_DataFrame(rd)
+        cd <- sanitize_DataFrame(cd)
+        SummarizedExperiment::rowData(se) <- rd
+        SummarizedExperiment::colData(se) <- cd
+
+        # C) (optional) rowRanges metadata if present and supported
+        if ("rowRanges" %in% slotNames(se)) {
+            rr <- try(SummarizedExperiment::rowRanges(se), silent = TRUE)
+            if (!inherits(rr, "try-error") && !is.null(rr)) {
+            mdr <- try(S4Vectors::metadata(rr), silent = TRUE)
+            if (!inherits(mdr, "try-error")) {
+                mdr <- sanitize_for_cache(mdr)
+                try(S4Vectors::metadata(rr) <- mdr, silent = TRUE)
+                try(SummarizedExperiment::rowRanges(se) <- rr, silent = TRUE)
+            }
+            }
         }
 
-        plotly::ggplotly(p + ggplot2::aes(x = log2FC, y = -log10(pval)), tooltip = "text")
-      }) %>% bindEvent(
-        input[[paste0("compute_volcano_", tbl_name)]],          # re-compute
-        input[[paste0("volcano_search_", tbl_name)]],           # UI-only redraw
-        input[[paste0("volcano_pcutoff_", tbl_name)]],          # UI-only redraw
-        input[[paste0("volcano_fccutoff_", tbl_name)]],         # UI-only redraw
-        ignoreInit = TRUE
-      )
+        se
+    }
 
-      output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
-        res <- volcano_res(); shiny::req(res)
-        DT::datatable(
-          res$table,
-          extensions = "Buttons",
-          options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip",
-                         buttons = c('copy','csv','excel','pdf','print'))
-        )
-      })
+    register_for_table <- function(tbl_name) {
+        #message("[", tbl_name, "] registering handlers")
 
-      # =====================================================
-      # 4) HEATMAP — heavy compute -> future, store to rv
-      # =====================================================
-      heat_res <- shiny::reactiveVal(NULL)
-
-      shiny::observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
-        message("[", tbl_name, "] recompute_heatmap clicked")
-        dep_out <- dep_base(); shiny::req(dep_out)
-        ht_mat  <- isolate(rv$ht_matrix[[tbl_name]])
-        shiny::req(!is.null(ht_mat))
-
-        stored_k <- isolate(rv$optimal_k_individual[[tbl_name]])
-
-        promises::future_promise({ 
-          opt_k <- if (is.null(stored_k)) {
-            elbow <- NbClust::NbClust(
-              ht_mat, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans"
+        # ----- One-time UI init for gene search choices -----
+        observeEvent(rv$tables[[tbl_name]], ignoreInit = FALSE, once = TRUE, {
+            updateSelectizeInput(
+            session, paste0("volcano_search_", tbl_name),
+            choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE
             )
-            as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
-          } else stored_k
-
-          dep_pg_sig <- DEP2::get_signicant(dep_out)
-          expr       <- SummarizedExperiment::assay(dep_pg_sig)
-          gene_info  <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
-          df         <- cbind(gene_info, as.data.frame(expr))
-          df         <- df[, c(colnames(gene_info), colnames(expr))]
-          df         <- stats::na.omit(df)
-
-          list(optimal_k = opt_k, df = df)
-        }, seed = TRUE) %...>% (function(value) {
-          message("[", tbl_name, "] heatmap future resolved (rows=", nrow(value$df), ")")
-          heat_res(value)
-        }) %...!% (function(e) {
-          showNotification(conditionMessage(e), type = "error")
-          message("[", tbl_name, "] heatmap error: ", conditionMessage(e))
+            updateSelectizeInput(
+            session, paste0("search_gene_", tbl_name),
+            choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE
+            )
         })
-      }, ignoreInit = TRUE)
 
-      output[[paste0("ht_", tbl_name)]] <- shiny::renderPlot({
-        dep_out <- dep_base(); shiny::req(dep_out)
-        res <- heat_res(); shiny::req(res)
+        # ----- Build a cache key for the DEP base per table -----
+        dep_key <- reactive({
+            cols_key <- paste(isolate(rv$time_cols[[tbl_name]]), collapse = "_")
+            paste(tbl_name, cols_key, isolate(rv$datatype[[tbl_name]]), sep = "_")
+        })
 
-        clustering_enabled <- input[[paste0("clustering_", tbl_name)]]
-        num_clusters       <- input[[paste0("num_clusters_", tbl_name)]]
+        # ----- Compute / load DEP base and update contrasts -----
+        observeEvent(
+            list(rv$tables[[tbl_name]], rv$time_cols[[tbl_name]], rv$datatype[[tbl_name]]),
+            {
+                withCallingHandlers({
+                    key <- dep_key()
+                    dt  <- isolate(rv$datatype[[tbl_name]])
+                    dat <- isolate(rv$tables[[tbl_name]])
+                    req(!is.null(dat), !is.null(dt))
 
-        if (isTRUE(clustering_enabled)) {
-          DEP2::plot_heatmap(dep_out, kmeans = TRUE, k = num_clusters)
-        } else {
-          DEP2::plot_heatmap(dep_out)
-        }
-      }) %>% bindEvent(
-        input[[paste0("recompute_heatmap_", tbl_name)]],        # re-compute
-        input[[paste0("clustering_", tbl_name)]],               # UI-only redraw
-        input[[paste0("num_clusters_", tbl_name)]],             # UI-only redraw
-        ignoreInit = TRUE
-      )
+                    if (cache$exists(key)) {
+                        #message("[", tbl_name, "] load DEP base: ", key)
+                        dep_out <- cache$get(key)
+                        #message("[", tbl_name, "] DEP loaded from cache")
+                    } else {
+                        #message("[", tbl_name, "] compute DEP base: ", key, " (", dt, ")")
+                        dep_out <- switch(dt,
+                            proteomics        = dep2_proteomics(dat, tbl_name, trimws(rv$time_cols[[tbl_name]])),
+                            phosphoproteomics = dep2_phosphoproteomics(dat, tbl_name, trimws(rv$time_cols[[tbl_name]])),
+                            rnaseq            = dep2_rnaseq(dat, tbl_name),
+                            stop("[", tbl_name, "] unknown datatype: ", dt)
+                        )
 
-      output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
-        res <- heat_res(); shiny::req(res)
-        DT::datatable(
-          res$df,
-          extensions = "Buttons",
-          options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip",
-                         buttons = c('copy','csv','excel','pdf','print'))
+                        # sanitize metadata (drop envs/functions) before caching
+                        dep_out <- sanitize_SE(dep_out)
+
+                        # Preflight serialization: this mimics what storr/rds would do
+                        ok <- TRUE
+                        tryCatch({
+                            invisible(serialize(dep_out, NULL))  # in-memory
+                        }, error = function(e) {
+                            ok <<- FALSE
+                            #message("[", tbl_name, "] serialize(preflight) failed: ", conditionMessage(e))
+                            # help identify the culprit:
+                            md  <- S4Vectors::metadata(dep_out)
+                            rdm <- S4Vectors::metadata(SummarizedExperiment::rowData(dep_out))
+                            cdm <- S4Vectors::metadata(SummarizedExperiment::colData(dep_out))
+                            # list bad fields (top level only) in each metadata
+                            list_bad <- function(m) {
+                                if (is.null(m)) return(character())
+                                nms <- names(m); if (is.null(nms)) nms <- as.character(seq_along(m))
+                                nms[vapply(m, .is_bad, logical(1))]
+                            }
+                            bad_top  <- list_bad(md)
+                            bad_rd   <- list_bad(rdm)
+                            bad_cd   <- list_bad(cdm)
+                            #if (length(bad_top)) message("  top-level metadata bad: ", paste(bad_top, collapse=", "))
+                            #if (length(bad_rd))  message("  rowData metadata bad: ",   paste(bad_rd,  collapse=", "))
+                            #if (length(bad_cd))  message("  colData metadata bad: ",   paste(bad_cd,  collapse=", "))
+                        })
+                        if (!ok) stop("DEP object still contains non-serializable fields; see logs.") #else message("Preflight checks successful")
+
+                        # Continue
+                        tryCatch({
+                        cache$set(key, dep_out)
+                        }, error = function(e) {
+                            #message("[", tbl_name, "] cache.set failed: ", conditionMessage(e))
+                            md <- S4Vectors::metadata(dep_out)  # <- use S4Vectors
+                            bad <- names(Filter(function(v) is.environment(v) || is.function(v), md))
+                            if (length(bad)) {
+                                #message("[", tbl_name, "] metadata contains env/function in: ", paste(bad, collapse = ", "))
+                            }
+                            stop(e)
+                        })
+                    }
+
+                    # store only the key (tiny), not the big object
+                    rv$dep_key[[tbl_name]] <- key
+
+                    # derive valid contrasts and push them to the UI
+                    rd_names <- colnames(SummarizedExperiment::rowData(dep_out))
+                    sig_cols <- grep("_significant$", rd_names, value = TRUE)
+                    choices  <- sub("_significant$", "", sig_cols)
+                    rv$contrasts[[tbl_name]] <- choices
+
+                    shinyWidgets::updateVirtualSelect(
+                        session,
+                        paste0("comparison_volcano_", tbl_name),
+                        choices  = choices,
+                        selected = if (length(choices)) choices[1] else NULL
+                    )
+
+                    # compact logging (avoid str() which returns NULL and is huge)
+                    dims <- tryCatch(dim(SummarizedExperiment::assay(dep_out)), error = function(...) NULL)
+                    #message("[", tbl_name, "] DEP ready ",
+                    #        if (!is.null(dims)) paste0("(", paste(dims, collapse = "x"), ") ") else "",
+                    #        "with ", length(choices), " contrasts")
+
+                            # check what is causing errors
+                    # store only the key (tiny), not the big object
+                    step <- "set dep_key"
+                    tryCatch({
+                        rv$dep_key[[tbl_name]] <- key
+                        #message("[", tbl_name, "] OK: ", step)
+                    }, error = function(e) {
+                        #message("[", tbl_name, "] FAIL: ", step, " -> ", conditionMessage(e)); stop(e)
+                    })
+
+                    # derive valid contrasts
+                    rd_names <- colnames(SummarizedExperiment::rowData(dep_out))
+                    sig_cols <- grep("_significant$", rd_names, value = TRUE)
+                    choices  <- sub("_significant$", "", sig_cols)
+
+                    #step <- "set contrasts"
+                    #tryCatch({
+                    #    # force plain character vector
+                    #    choices <- as.character(choices)
+                    #    rv$contrasts[[tbl_name]] <- choices
+                    #    #message("[", tbl_name, "] OK: ", step, " (n=", length(choices), ")")
+                    #}, error = function(e) {
+                    #    #message("[", tbl_name, "] FAIL: ", step, " -> ", conditionMessage(e)); stop(e)
+                    #})
+
+                    #step <- "update virtualSelect"
+                    #tryCatch({
+                    #    shinyWidgets::updateVirtualSelect(
+                    #        session,
+                    #        paste0("comparison_volcano_", tbl_name),
+                    #        choices  = choices,
+                    #        selected = if (length(choices)) choices[1] else NULL
+                    #    )
+                    #    #message("[", tbl_name, "] OK: ", step)
+                    #}, error = function(e) {
+                    #    #message("[", tbl_name, "] FAIL: ", step, " -> ", conditionMessage(e)); stop(e)
+                    #})
+
+                    #step <- "final #message"
+                    #tryCatch({
+                    #    dims <- tryCatch(dim(SummarizedExperiment::assay(dep_out)), error = function(...) NULL)
+                    #    #message("[", tbl_name, "] DEP ready ",
+                    #            if (!is.null(dims)) paste0("(", paste(dims, collapse = "x"), ") ") else "",
+                    #            "with ", length(choices), " contrasts")
+                    #}, error = function(e) {
+                    #    #message("[", tbl_name, "] FAIL: ", step, " -> ", conditionMessage(e)); stop(e)
+                    #})
+                    invisible(NULL)
+                }, error = function(e) {
+                    cat("\n=== HARD TRACE ===\n")
+                    cs <- sys.calls()
+                    for (i in seq_along(cs)) cat(i, ":", deparse(cs[[i]], nlines = 1L), "\n")
+                    cat("=== /HARD TRACE ===\n\n")
+                    stop(e)
+                })
+            },
+            ignoreInit = FALSE
         )
-      })
+        
+        
 
-      output[[paste0("optimal_k", tbl_name)]] <- renderUI({
-        res <- heat_res(); shiny::req(res)
-        if (is.null(rv$optimal_k_individual[[tbl_name]])) {
-          rv$optimal_k_individual[[tbl_name]] <- res$optimal_k
+        # =====================================================
+        # VOLCANO — compute in future; return df + sig table
+        # =====================================================
+        volcano_res <- reactiveVal(NULL)
+
+        observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
+            #message("[", tbl_name, "] compute_volcano")
+
+            key <- isolate(rv$dep_key[[tbl_name]]); req(key)
+            read_num <- function(x){ 
+                y <- suppressWarnings(as.numeric(x)); if (length(y)!=1 || !is.finite(y)) NA_real_ else y 
+            }
+
+            contrs <- isolate(rv$contrasts[[tbl_name]])
+            if (is.null(contrs) || !length(contrs)) {
+                showNotification("No contrasts available yet.", type = "error"); return()
+            }
+
+            contrast <- isolate(input[[paste0("comparison_volcano_", tbl_name)]])
+            if (is.null(contrast) || !nzchar(contrast)) contrast <- contrs[1]
+
+            pcut_raw <- read_num(isolate(input[[paste0("volcano_pcutoff_",  tbl_name)]]))
+            fccut    <- read_num(isolate(input[[paste0("volcano_fccutoff_", tbl_name)]]))
+            dtype    <- isolate(rv$datatype[[tbl_name]])
+            req(is.finite(pcut_raw), is.finite(fccut))
+
+            alpha <- pcut_raw; if (!is.finite(alpha) || alpha <= 0) alpha <- .Machine$double.xmin; if (alpha > 1) alpha <- 1
+
+            promises::future_promise({
+                # --- fresh, plain DB connection on worker ---
+                con_w <- DBI::dbConnect(RSQLite::SQLite(), dbname = db_path)
+                on.exit(try(DBI::dbDisconnect(con_w), silent = TRUE), add = TRUE)
+                cache_w <- storr::storr_dbi(tbl_data = "storr_data", tbl_keys = "storr_keys", con = con_w)
+
+                dep_out <- cache_w$get(key)
+                dep_cut <- DEP2::add_rejections(dep_out, alpha = alpha, lfc = fccut)
+
+                lfc_col  <- paste0(contrast, "_diff")
+                pval_col <- paste0(contrast, "_p.adj")
+                rd <- SummarizedExperiment::rowData(dep_cut)
+
+                if (dtype == "proteomics") {
+                    df <- data.frame(gene_names = stringr::str_to_title(rd$Gene_Name),
+                                    pval = rd[[pval_col]], log2FC = rd[[lfc_col]], stringsAsFactors = FALSE)
+                } else if (dtype == "phosphoproteomics") {
+                    df <- data.frame(peptide = rd$pepG,
+                                    pval = rd[[pval_col]], log2FC = rd[[lfc_col]], stringsAsFactors = FALSE)
+                } else {
+                    df <- data.frame(gene_ID = rownames(rd),
+                                    pval = rd[[pval_col]], log2FC = rd[[lfc_col]], stringsAsFactors = FALSE)
+                }
+                df$pval <- pmax(df$pval, .Machine$double.xmin)
+
+                sig_se    <- DEP2::get_signicant(dep_cut, contrast)
+                sig_table <- DEP2::get_results(sig_se)
+
+                list(df = df, table = sig_table, dtype = dtype)
+            },
+            seed     = TRUE,
+            globals  = list(db_path = db_path, key = key, contrast = contrast, alpha = alpha, fccut = fccut, dtype = dtype),
+            packages = c("DBI","RSQLite","storr","DEP2","SummarizedExperiment","stringr")
+            ) %...>% volcano_res %...!% (function(e) {
+                showNotification(conditionMessage(e), type = "error")
+                #message("[", tbl_name, "] volcano error: ", conditionMessage(e))
+            })
+        }, ignoreInit = TRUE)
+
+        # Native plotly render (fast on main thread)
+        output[[paste0("volcano_", tbl_name)]] <- plotly::renderPlotly({
+            res <- volcano_res(); req(res)
+            df  <- res$df
+            df$neglog10p <- -log10(df$pval)
+
+            # Optional downsample if huge (keeps UI snappy)
+            if (nrow(df) > 50000) {
+                idx <- sample.int(nrow(df), 50000)
+                df  <- df[idx, , drop = FALSE]
+            }
+
+            # Labels + highlighting
+            text_col <- if ("gene_names" %in% names(df)) df$gene_names else if ("peptide" %in% names(df)) df$peptide else df$gene_ID
+            hl <- input[[paste0("volcano_search_", tbl_name)]] |>
+                    stringr::str_split(",", simplify = TRUE) |>
+                    stringr::str_trim() |>
+                    stringr::str_to_title()
+            size <- ifelse(text_col %in% hl, 9, 5)
+
+            plotly::plot_ly(
+                df,
+                x = ~log2FC,
+                y = ~neglog10p,
+                type = "scatter",
+                mode = "markers",
+                text = ~text_col,
+                marker = list(size = size),
+                hovertemplate = paste0(
+                "%{text}<br>",
+                "log2FC: %{x:.3f}<br>",
+                "-log10(p): %{y:.3f}<extra></extra>"
+                )
+            ) %>% plotly::layout(
+                xaxis = list(title = "log2FC"),
+                yaxis = list(title = "-log10(p)")
+            )
+        }) %>% bindEvent(
+        input[[paste0("compute_volcano_", tbl_name)]],
+        input[[paste0("volcano_search_", tbl_name)]],
+        input[[paste0("volcano_pcutoff_", tbl_name)]],
+        input[[paste0("volcano_fccutoff_", tbl_name)]],
+        ignoreInit = TRUE
+        )
+
+        # Sig table uses the one returned by the future (no work on main)
+        output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
+            res <- volcano_res(); req(res)
+            DT::datatable(
+                res$table,
+                extensions = "Buttons",
+                options = list(
+                scrollX = TRUE, pageLength = 10, dom = "Bfrtip",
+                buttons = c("copy","csv","excel","pdf","print")
+                )
+            )
+        })
+
+        # =====================================================
+        # HEATMAP: compute + DRAW in future; stream PNG to UI
+        # =====================================================
+        heat_res <- reactiveVal(NULL)
+
+        observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
+            #message("[", tbl_name, "] heatmap recompute")
+
+            key <- isolate(rv$dep_key[[tbl_name]]); req(key)
+
+            read_num <- function(x){ y <- suppressWarnings(as.numeric(x)); if (length(y)!=1 || !is.finite(y)) NA_real_ else y }
+            pcut_raw  <- read_num(isolate(input[[paste0("heat_pcutoff_",  tbl_name)]]))
+            fccut_raw <- read_num(isolate(input[[paste0("heat_fccutoff_", tbl_name)]]))
+            clustering <- isTRUE(isolate(input[[paste0("clustering_",   tbl_name)]]))
+            num_k      <- isolate(input[[paste0("num_clusters_", tbl_name)]])
+            if (!is.finite(pcut_raw) || !is.finite(fccut_raw)) {
+                showNotification("Heatmap cutoffs invalid.", type = "error"); return()
+            }
+            alpha <- 10^(-pcut_raw); if (!is.finite(alpha) || alpha <= 0) alpha <- .Machine$double.xmin; if (alpha > 1) alpha <- 1
+
+            promises::future_promise(
+                {
+                # --- open a fresh, plain DB connection on the worker ---
+                con_w <- DBI::dbConnect(RSQLite::SQLite(), dbname = db_path)
+                on.exit(try(DBI::dbDisconnect(con_w), silent = TRUE), add = TRUE)
+                cache_w <- storr::storr_dbi(tbl_data = "storr_data", tbl_keys = "storr_keys", con = con_w)
+
+                dep_out <- cache_w$get(key)
+
+                # Apply cutoffs & get significant set
+                dep_cut <- DEP2::add_rejections(dep_out, alpha = alpha, lfc = fccut_raw)
+                dep_sig <- DEP2::get_signicant(dep_cut)
+
+                if (is.null(dep_sig) || NROW(SummarizedExperiment::rowData(dep_sig)) == 0) {
+                    tf <- tempfile(fileext = ".png")
+                    grDevices::png(tf, width = 1200, height = 900, res = 144)
+                    on.exit(try(grDevices::dev.off(), silent = TRUE), add = TRUE)
+                    plot.new(); title("No significant features for current cutoffs")
+                    return(list(
+                    img = list(src = tf, width = 1200, height = 900),
+                    optimal_k = NA_integer_, pcut = alpha, fccut = fccut_raw, df = data.frame()
+                    ))
+                }
+
+                sig_mat <- SummarizedExperiment::assay(dep_sig)
+
+                # Compute k on significant matrix (sandbox graphics to avoid device leakage)
+                opt_k <- NA_integer_
+                if (!is.null(dim(sig_mat)) && nrow(sig_mat) >= 2 && ncol(sig_mat) >= 2) {
+                    tfk <- tempfile(fileext = ".png")
+                    grDevices::png(tfk, width = 1200, height = 900, res = 144)
+                    op <- graphics::par(no.readonly = TRUE)
+                    on.exit({ try(graphics::par(op), silent = TRUE); try(grDevices::dev.off(), silent = TRUE); try(unlink(tfk), silent = TRUE) }, add = TRUE)
+                    elbow <- NbClust::NbClust(as.matrix(sig_mat), distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
+                    opt_k <- as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
+                }
+
+                # Selected genes table
+                sig_df <- DEP2::get_results(dep_sig)
+
+                # Draw heatmap to PNG off-main
+                tf <- tempfile(fileext = ".png")
+                grDevices::png(tf, width = 1200, height = 900, res = 144)
+                on.exit(try(grDevices::dev.off(), silent = TRUE), add = TRUE)
+                if (isTRUE(clustering) && is.finite(num_k) && !is.na(num_k)) {
+                    DEP2::plot_heatmap(dep_cut, kmeans = TRUE, k = num_k)
+                } else {
+                    DEP2::plot_heatmap(dep_cut)
+                }
+
+                list(img = list(src = tf, width = 1200, height = 900),
+                    optimal_k = opt_k, pcut = alpha, fccut = fccut_raw, df = sig_df)
+            },
+            seed    = TRUE,
+            globals = list(db_path = db_path, key = key, clustering = clustering, num_k = num_k, alpha = alpha, fccut_raw = fccut_raw),
+            packages = c("DBI","RSQLite","storr","DEP2","SummarizedExperiment","NbClust","grDevices","graphics")
+            ) %...>% heat_res %...!% (function(e) {
+                showNotification(conditionMessage(e), type = "error")
+                #message("[", tbl_name, "] heatmap error: ", conditionMessage(e))
+            })
+        }, ignoreInit = TRUE)
+
+        # show the pre-rendered PNG
+        output[[paste0("ht_", tbl_name)]] <- renderImage({
+        res <- heat_res(); req(res)
+        list(src = res$img$src,
+            width = res$img$width,
+            height = res$img$height,
+            alt = "DEP heatmap")
+        }, deleteFile = TRUE)
+
+        # now uses df directly from the future
+        output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
+        res <- heat_res(); req(res)
+        DT::datatable(
+            res$df,
+            extensions = "Buttons",
+            options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip",
+                        buttons = c("copy","csv","excel","pdf","print"))
+        )
+        })
+
+        output[[paste0("optimal_k", tbl_name)]] <- renderUI({
+        res <- heat_res(); req(res)
+        if (is.null(rv$optimal_k_individual[[tbl_name]]) && !is.na(res$optimal_k)) {
+            rv$optimal_k_individual[[tbl_name]] <- res$optimal_k
         }
-        shiny::tags$ul(shiny::tags$li(sprintf(
-          "The optimal k for this table following the elbow rule is: %s", res$optimal_k
-        )))
-      })
+        htmltools::tagList(
+            tags$ul(tags$li(sprintf(
+            "The optimal k for this table (significant subset) is: %s",
+            ifelse(is.na(res$optimal_k), "N/A (too few rows)", res$optimal_k)
+            )))
+        )
+        })
+    }
 
-    }))  # end local(.tbl)
-  }, ignoreInit = FALSE, once = TRUE)  # register once when table_names is known
+    # Self-registering: runs now and on changes to rv$table_names
+    observe({
+        tbls <- rv$table_names
+        if (is.null(tbls) || !length(tbls)) return()
+        todo <- setdiff(tbls, registered())
+        if (!length(todo)) return()
+        for (t in todo) register_for_table(t)
+        registered(union(registered(), todo))
+        #message("dep_heatmap_server: registered = ", paste(registered(), collapse = ", "))
+        flush.console()
+    })
 }

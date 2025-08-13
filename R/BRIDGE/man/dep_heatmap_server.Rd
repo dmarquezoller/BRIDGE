@@ -7,7 +7,7 @@ Expects:
   rv$tables[[tbl]], rv$time_cols[[tbl]], rv$datatype[[tbl]]
   rv$ht_matrix[[tbl]], rv$optimal_k_individual[[tbl]]}
 \usage{
-dep_heatmap_server(input, output, session, rv, cache)
+dep_heatmap_server(input, output, session, rv, cache, db_path)
 }
 \description{
 Server module for DEP heatmap + volcano

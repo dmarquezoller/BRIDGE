@@ -62,11 +62,9 @@ server_function <- function(input, output, session, db_path){
   })
 
   annotation_metadata <- shiny::reactive({
-    shiny::req(input$species)
-    annotation_table <- input$annotation_table
-    query <- sprintf("SELECT * FROM '%s'", annotation_table)
-    return(query)
-  })
+    shiny::req(input$annotation_table)
+    sprintf("SELECT * FROM '%s'", input$annotation_table)
+})
   
   # COLUMN SELECTOR INPUT 
 
@@ -155,6 +153,32 @@ server_function <- function(input, output, session, db_path){
       
     }
   })
+
+  # Register table renderers once per table, when it shows up
+observeEvent(rv$table_names, {
+  to_register <- setdiff(rv$table_names, ls(envir = session$userData, all.names = TRUE))
+  lapply(to_register, function(tbl_name) {
+    # mark as registered
+    session$userData[[tbl_name]] <- TRUE
+
+    output[[paste0("table_", tbl_name)]] <- DT::renderDT({
+      df <- rv$tables[[tbl_name]]
+      DT::datatable(
+        df,
+        extensions = c("Scroller"),
+        options = list(
+          deferRender = TRUE,
+          scrollX = TRUE,
+          scrollY = 300,
+          scroller = TRUE,
+          pageLength = 25,
+          dom = "t"   # minimal chrome; add Buttons only if you really need them
+        ),
+        rownames = FALSE
+      )
+    }, server = TRUE)
+  })
+}, ignoreInit = FALSE)
   
   # DELETE DATA SELECTOR
 
@@ -199,89 +223,92 @@ server_function <- function(input, output, session, db_path){
 
   #### MAIN UI FOR EACH TABLE #### (includes functions for heatmap ui)
 
-  output$all_tables_ui <- shiny::renderUI({
-    shiny::req(length(rv$tables) > 0)
+output$all_tables_ui <- shiny::renderUI({
+  shiny::req(length(rv$table_names) > 0)   # <- depend on names, not rv$tables
 
-    lapply(rv$table_names, function(tbl_name) {
-      shinydashboard::box(title=paste("Table: ", tbl_name), width=12, solidHeader = TRUE, status="primary", style="overflow-x: auto", collapsible = T, collapsed = F,
-          shinydashboard::box(title="Table", width = 12, solidHeader = T, status = "primary", style= "overflow-x: auto", collapsible = T, collapsed = F,
-              h3(),
-              DT::DTOutput(paste0("table_", tbl_name)),
-              h3()              
-          ),
-          shinydashboard::tabBox(
-            title = shinyWidgets::actionBttn("individual_help", "Help", color = "primary" ,icon=shiny::icon("question-circle"), size="sm", style = "bordered"), width = 12,
-            id = "plotTabs", selected = "Raw Heatmap",
-            shiny::tabPanel("Raw Heatmap", 
-                     shiny::fluidRow(
-                        raw_heatmap_ui(tbl_name) #Function in heatmap_ui.R
-                      )
-                    
+  lapply(rv$table_names, function(tbl_name) {
+    shinydashboard::box(
+      title = paste("Table:", tbl_name), width = 12, solidHeader = TRUE,
+      status = "primary", style = "overflow-x: auto", collapsible = TRUE, collapsed = FALSE,
+
+      shinydashboard::box(
+        title = "Table", width = 12, solidHeader = TRUE, status = "primary",
+        style = "overflow-x: auto", collapsible = TRUE, collapsed = FALSE,
+        h3(), DT::DTOutput(paste0("table_", tbl_name)), h3()
+      ),
+
+      shinydashboard::tabBox(
+        title = shinyWidgets::actionBttn(paste0("individual_help_", tbl_name), "Help",
+                  color = "primary", icon = shiny::icon("question-circle"),
+                  size = "sm", style = "bordered"),
+        id = paste0("plotTabs_", tbl_name),  # unique per table
+        width = 12, selected = "Raw Heatmap",
+
+        shiny::tabPanel(
+          "Raw Heatmap",
+          shiny::fluidRow(raw_heatmap_ui(tbl_name))
+        ),
+
+        shiny::tabPanel(
+          "DEP Heatmap",
+          shiny::fluidRow(dep_heatmap_ui(tbl_name))
+        ),
+
+        shiny::tabPanel(
+          "Volcano Plot",
+          shiny::fluidRow(
+            shinydashboard::box(
+              title = "Settings", width = 5, solidHeader = TRUE, status = "info",
+              # NOTE: leave choices empty; the server updates it later
+              shinyWidgets::virtualSelectInput(
+                paste0("comparison_volcano_", tbl_name), "Select Comparison:",
+                choices = NULL, selected = NULL
+              ),
+              shiny::selectizeInput(paste0("volcano_search_", tbl_name),
+                                    "Search for Gene:", choices = NULL, multiple = TRUE),
+              shinyWidgets::chooseSliderSkin("Flat", color = "#3d8dbc"),
+              shiny::numericInput(paste0("volcano_pcutoff_", tbl_name), "FDR Threshold (-log10):",
+                                  min = 0, max = 10, value = 0.05, step = 0.01),
+              shiny::numericInput(paste0("volcano_fccutoff_", tbl_name), "FC Threshold (|log2FC|):",
+                                  min = 0, max = 10, value = 1, step = 0.1),
+              shinyWidgets::actionBttn(
+                paste0("compute_volcano_", tbl_name),
+                shiny::span("Compute Volcano", style = "color: white;"),
+                style = "simple", color = "primary", size = "sm"
+              )
             ),
-            shiny::tabPanel("DEP Heatmap",
-                     shiny::fluidRow(
-                        dep_heatmap_ui(tbl_name) #Function in heatmap_ui.R
-                     )
-            ),
-            shiny::tabPanel("Volcano Plot",
-                     shiny::fluidRow(
-                       shinydashboard::box(title = "Settings", width = 5, solidHeader = T, status = "info",
-                           shinyWidgets::virtualSelectInput(paste0("comparison_volcano_", tbl_name), "Select Comparison:", 
-                                              choices = rv$contrasts[[tbl_name]], 
-                                              selected = rv$contrasts[[tbl_name]][1]
-                                              ),
-                           shiny::selectizeInput(paste0("volcano_search_",tbl_name), "Search for Gene:",  choices = NULL, multiple=T),
-                           shinyWidgets::chooseSliderSkin("Flat", color="#3d8dbc"),
-                           shiny::numericInput(paste0("volcano_pcutoff_", tbl_name), "FDR Threshold:", 
-                                       min = 0, max = 10, value = 0.05, step = 0.01),
-                           shiny::numericInput(paste0("volcano_fccutoff_", tbl_name), "FC Threshold:", 
-                                       min = 0, max = 10, value = 1, step = 0.1),
-                           shinyWidgets::actionBttn(paste0("compute_volcano_", tbl_name), shiny::span("Compute  Volcano", style = "color: white;"), style = "simple", color = "primary", size = "sm")
-                       ),
-                       shinydashboard::box(
-                         title = "Volcano Plot", width = 7, solidHeader = TRUE, status = "info",
-                         shinycssloaders::withSpinner(
-                          plotly::plotlyOutput(paste0("volcano_", tbl_name)),
-                          type = 8,
-                          color = "#2b8cbe", 
-                          caption = "Loading..."
-                         )
-                       )
-                       
-                     ),
-                     shinydashboard::box(title="Significant Genes", width=12, solidHeader = T, status="info", collapsible = T, collapsed = F,
-                         h3(),
-                         DT::DTOutput(paste0("volcano_sig_table_", tbl_name)),
-                         h3()
-                     )
-            ),
-            shiny::tabPanel("Gene Expression", 
-                     shiny::fluidRow(
-                        timeline_gene_search(tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
-                     ),
-                     shiny::fluidRow(
-                        timeline_plot(tbl_name) #Function for the ui of the timeline plot in timeline_ui.R
-                     ), 
-                     shiny::fluidRow(
-                        timeline_table(tbl_name) #Function for the ui of the timeline table in timeline_ui.R
-                     )
-            ),
-            shiny::tabPanel("Enrichment analysis", 
-                     shiny::fluidRow(
-                        enrichment_settings_ui(tbl_name, rv), 
-                        enrichment_plots_ui(tbl_name)
-                     )
-            ),
-            shiny::tabPanel("PCA", 
-                    shiny::fluidRow(
-                      pca_ui(tbl_name)
-                    )
+            shinydashboard::box(
+              title = "Volcano Plot", width = 7, solidHeader = TRUE, status = "info",
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(paste0("volcano_", tbl_name)),
+                type = 8, color = "#2b8cbe", caption = "Loading..."
+              )
             )
+          ),
+          shinydashboard::box(
+            title = "Significant Genes", width = 12, solidHeader = TRUE, status = "info",
+            style = "overflow-x: auto", collapsible = TRUE, collapsed = FALSE,
+            h3(), DT::DTOutput(paste0("volcano_sig_table_", tbl_name)), h3()
           )
+        ),
+
+        shiny::tabPanel(
+          "Gene Expression",
+          shiny::fluidRow(timeline_gene_search(tbl_name, rv)),
+          shiny::fluidRow(timeline_plot(tbl_name)),
+          shiny::fluidRow(timeline_table(tbl_name))
+        ),
+
+        shiny::tabPanel(
+          "Enrichment analysis",
+          shiny::fluidRow(enrichment_settings_ui(tbl_name, rv), enrichment_plots_ui(tbl_name))
+        ),
+
+        shiny::tabPanel("PCA", shiny::fluidRow(pca_ui(tbl_name)))
       )
-      
-    })
+    )
   })
+})
 
   #### END OF MAIN UI FOR EACH TABLE ####
   
@@ -304,7 +331,7 @@ server_function <- function(input, output, session, db_path){
 
 ####### DEP HEATMAP ########
  
- dep_heatmap_server(input, output, session, rv, cache) #Function in heatmap_server.R
+ dep_heatmap_server(input, output, session, rv, cache, db_path) #Function in heatmap_server.R
 
 ###### TIMELINE PLOT #######
 

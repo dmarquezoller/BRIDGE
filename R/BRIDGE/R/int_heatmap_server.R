@@ -169,7 +169,7 @@ int_heatmap_server <- function(input, output, session, rv) {
      shiny::req(rv$scatter_plots)
 
       if (any(rv$datatype[selected_tables] == "phosphoproteomics")) {
-        # Return a nicely styled message div
+        # Return a nicely styled #message div
        shiny::div(
           style = "padding: 20px; color: #d9534f; font-weight: bold; text-align: center;",
           "Scatter plot is not available when phosphoproteomics data is included because of non-1:1 row mapping."

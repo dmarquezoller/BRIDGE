@@ -11,14 +11,37 @@ library(tidyverse)
 library(shiny)
 #library(shinydashboard)
 #library(shinyWidgets)
+options(shiny.fullstacktrace = TRUE, shiny.sanitize.errors = FALSE)
+
+if (!exists(".orig_unclass", inherits = FALSE)) {
+  .orig_unclass <- base::unclass
+  unlockBinding("unclass", asNamespace("base"))  # in case binding is locked
+  assign("unclass", function(x, ...) {
+    if (is.environment(x)) {
+      cat("\n=== unclass(environment) CALLED ===\n")
+      cat("Call stack:\n")
+      cs <- sys.calls()
+      for (i in seq_along(cs)) cat(sprintf("%2d: %s\n", i, deparse(cs[[i]], nlines = 1L)))
+      cat("=== /unclass(environment) ===\n\n")
+    }
+    .orig_unclass(x, ...)
+  }, envir = globalenv())
+  # keep base::unclass available for everything else
+}
 
 # pdf(file = NULL)  # delete, can trigger Warning: CallrFuture (<unnamed-6>) added, removed, or modified devices. A future expression must close any opened devices and must not close devices it did not open. Details: 1 devices differ: index=2, before=‘NA’, after=‘pdf’. See also help("future.options", package = "future")
+# # 1 thread per worker to allow true parallelism
+Sys.setenv(OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1", BLIS_NUM_THREADS="1")
+if (requireNamespace("RhpcBLASctl", quietly=TRUE)) { RhpcBLASctl::blas_set_num_threads(1); RhpcBLASctl::omp_set_num_threads(1) }
+library(future); library(future.callr)
+options(
+  #future.debug = TRUE,  # Enable debugging for future  
+  future.seed = TRUE
+)
+future::plan(future.callr::callr, workers = 2L)
+#message("workers = ", future::nbrOfWorkers())
 
-#future::plan(multisession, workers = 4)
-future::plan(future.callr::callr, workers = 4)
 set.seed(42)
-options(future.seed = TRUE)
-
 # Function to run the app with a command-line argument for db_path
 bridge <- function() {
   # Retrieve command-line arguments
