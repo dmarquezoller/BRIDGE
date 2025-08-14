@@ -209,6 +209,8 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         dep_output         <- isolate(rv$dep_output[[tbl_name]])
         ht_matrix          <- isolate(rv$ht_matrix[[tbl_name]])
         stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
+        heatmap_pval       <- isolate(input[[paste0("heatmap_pcutoff_", tbl_name)]])
+        heatmap_lfc        <- isolate(input[[paste0("heatmap_fccutoff_", tbl_name)]])
         columns_key        <- paste(rv$time_cols[[tbl_name]], collapse = "_")
 
         key <- if (isTRUE(clustering_enabled)) {
@@ -247,6 +249,10 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         clustering_enabled <- input[[paste0("clustering_", tbl_name)]]
         num_clusters       <- input[[paste0("num_clusters_", tbl_name)]]
         dep_output         <- rv$dep_output[[tbl_name]]
+        heatmap_pval       <- input[[paste0("heatmap_pcutoff_", tbl_name)]]
+        heatmap_lfc        <- input[[paste0("heatmap_fccutoff_", tbl_name)]]
+        p_cut              <- 10^(-heatmap_pval)
+        lfc_cut            <- heatmap_lfc
         req(dep_output)  # avoid early NULLs
 
         res <- get_dep_result(tbl_name)
@@ -256,20 +262,39 @@ dep_heatmap_server <- function(input, output, session, rv, cache) {
         key <- rv$current_dep_heatmap_key[[tbl_name]]
         if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
         # Build plot on main process
+
         if (isTRUE(clustering_enabled)) {
-            DEP2::plot_heatmap(dep_output, kmeans = TRUE, k = num_clusters)
+            rd <- SummarizedExperiment::rowData(dep_output)
+            rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
+            SummarizedExperiment::rowData(dep_output) <- rd
+            dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
+            DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
         } else {
-            DEP2::plot_heatmap(dep_output)
+            rd <- SummarizedExperiment::rowData(dep_output)
+            rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
+            SummarizedExperiment::rowData(dep_output) <- rd
+            dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
+            DEP2::plot_heatmap(dep_output_filtered)
         }
     })
 
     output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
-        res <- get_dep_result(tbl_name)
+        res              <- get_dep_result(tbl_name)
+        dep_output       <- rv$dep_output[[tbl_name]]
+        heatmap_pval     <- input[[paste0("heatmap_pcutoff_", tbl_name)]]
+        heatmap_lfc      <- input[[paste0("heatmap_fccutoff_", tbl_name)]]
+        p_cut            <- 10^(-heatmap_pval)
+        lfc_cut          <- heatmap_lfc
         req(res)
         key <- rv$current_dep_heatmap_key[[tbl_name]]
         if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-
-        DT::datatable(res$df, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
+        rd <- SummarizedExperiment::rowData(dep_output)
+        rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
+        SummarizedExperiment::rowData(dep_output) <- rd
+        dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
+        gene_names <- SummarizedExperiment::rowData(dep_output)$Gene_Name
+        df_filtered <- res$df[res$df$Gene_Name %in% gene_names, ]
+        DT::datatable(df_filtered, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
     })
 
     output[[paste0("optimal_k", tbl_name)]] <- renderUI({
