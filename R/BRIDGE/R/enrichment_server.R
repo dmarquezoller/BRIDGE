@@ -1,46 +1,58 @@
 #' @export
-EnrichmentServer <- function(id, rv) 
-    moduleServer(
-    id,
-    function(input, output, session){
-    shiny::observe(
-        lapply(rv$table_names, function(tbl_name) {
-            shiny::observeEvent(input[[paste0("compute_enrichment_", tbl_name)]], {
-                if (rv$datatype[[tbl_name]] == "phosphoproteomics") {
-                    output[[paste0("enrichment_", tbl_name)]] <-shiny::renderUI({
-                        shiny::tags$div(
-                        style = "padding: 20px; color: #d9534f; font-weight: bold; text-align: center;",
-                        "No enrichment plot available for phosphoproteomics datasets."
-                        )
-                    })
-                    return()  # Skip further processing
-                }
-                
-                species <- stringr::str_to_title(rv$species[[tbl_name]])
-                enrichment_type <- input[[paste0("comparison_db_", tbl_name)]]
-                contrast <- input[[paste0("contrasts_enrichment_", tbl_name)]]
-                dep_output <- rv$dep_output[[tbl_name]]
-                dep_pg <- dep_output %>% DEP2::add_rejections(alpha = 0.05,lfc = 2)
-                DEP2::check_enrichment_depends()
-                DEP2::check_organismDB_depends(species) # organism annotation for mouse
-                print(species)
-                print(enrichment_type)
-                print(contrast)
-                if (!(species %in% c("Zebrafish", "Human", "Mouse")) ) {
-                    rownames(dep_pg) <- stringr::str_to_upper(rownames(dep_pg))
-                    species = "Human"
-                }
-                res_ora <- DEP2::test_ORA(dep_pg, type = enrichment_type, species = species, contrasts = contrast)
+EnrichmentServer <- function(id, rv, tbl_name) {
+  moduleServer(id, function(input, output, session) {
 
-                output[[paste0("enrichment_", tbl_name)]] <- shiny::renderUI({
-                    plotOutput(paste0("enrichment_plot_", tbl_name))
-                })
-                output[[paste0("enrichment_plot_", tbl_name)]] <- shiny::renderPlot({
-                    enrichplot::dotplot(res_ora)
-            })
-            })
+    # Populate contrast choices when available
+    observe({
+      req(rv$contrasts[[tbl_name]])
+      updateSelectInput(session, "contrasts_enrichment",
+                        choices = rv$contrasts[[tbl_name]])
+    })
 
+    # Render contrast select UI (so we can safely update it)
+    output$contrast_ui <- renderUI({
+      selectInput(session$ns("contrasts_enrichment"),
+                  "Contrast", choices = rv$contrasts[[tbl_name]])
+    })
+
+    observeEvent(input$compute_enrichment, {
+      req(rv$dep_output[[tbl_name]], rv$datatype[[tbl_name]], rv$species[[tbl_name]])
+
+      # Phospho: show message and stop
+      if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
+        output$enrichment <- renderUI({
+          div(style = "padding: 20px; color: #d9534f; font-weight: bold; text-align: center;",
+              "No enrichment plot available for phosphoproteomics datasets.")
         })
-    )
+        return(invisible())
+      }
+
+      species <- stringr::str_to_title(rv$species[[tbl_name]])
+      enrichment_type <- input$comparison_db
+      contrast <- input$contrasts_enrichment
+      dep_output <- rv$dep_output[[tbl_name]]
+
+      DEP2::check_enrichment_depends()
+      DEP2::check_organismDB_depends(species)
+
+      # Fallback for unsupported organisms
+      if (!(species %in% c("Zebrafish", "Human", "Mouse"))) {
+        rownames(dep_output) <- stringr::str_to_upper(rownames(dep_output))
+        species <- "Human"
+      }
+
+      # Sig filtering used in your original code before ORA
+      dep_pg <- DEP2::add_rejections(dep_output, alpha = 0.05, lfc = 2)
+
+      res_ora <- DEP2::test_ORA(dep_pg, type = enrichment_type,
+                                species = species, contrasts = contrast)
+
+      output$enrichment <- renderUI({
+        plotOutput(session$ns("enrichment_plot"), height = "520px")
+      })
+      output$enrichment_plot <- renderPlot({
+        enrichplot::dotplot(res_ora)
+      })
+    }, ignoreInit = TRUE)
+  })
 }
-)

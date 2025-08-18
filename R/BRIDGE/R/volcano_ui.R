@@ -1,34 +1,51 @@
 #' @export
-VolcanoUI  <- function(id, tbl_name, contrasts) {   
-                        ns <- NS(id)                        
-                        shinydashboard::box(title = "Volcano", width = 12, solidHeader = TRUE, status = "info",
-                        shiny::fluidRow(),
-                        shiny::fluidRow(
-                        shinydashboard::box(title = "Settings", width = 5, solidHeader = T, status = "info",
-                            shinyWidgets::virtualSelectInput(ns(paste0("comparison_volcano_", tbl_name)), "Select Comparison:", choices = contrasts, selected = contrasts[1]),
-                            shiny::selectizeInput(ns(paste0("volcano_search_",tbl_name)), "Search for Gene:", choices = NULL),
-                            shinyWidgets::chooseSliderSkin("Flat", color="#3d8dbc"),
-                            shiny::numericInput(ns(paste0("volcano_pcutoff_", tbl_name)), "FDR Threshold:", 
-                                        min = 0, max = 10, value = 0.05, step = 0.01),
-                            shiny::numericInput(ns(paste0("volcano_fccutoff_", tbl_name)), "FC Threshold:", 
-                                        min = 0, max = 10, value = 1, step = 0.1),
-                            shinyWidgets::actionBttn(ns(paste0("compute_volcano_", tbl_name)), shiny::span("Compute  Volcano", style = "color: white;"), style = "simple", color = "primary", size = "sm")
-                        ),
-                        shinydashboard::box(
-                            title = "Volcano Plot", width = 7, solidHeader = TRUE, status = "info",
-                            shinycssloaders::withSpinner(
-                            plotly::plotlyOutput(ns(paste0("volcano_", tbl_name))),
-                            type = 8,
-                            color = "#2b8cbe", 
-                            caption = "Loading..."
-                            )  
-                        )
-                        ),
-                        h5(),
-                        shinydashboard::box(title="Significant Genes", width=12, solidHeader = T, status="info", collapsible = T, collapsed = F,
-                            h3(),
-                            DT::DTOutput(ns(paste0("volcano_sig_table_", tbl_name))),
-                            h3()
-                        )
-                        )
+VolcanoUI <- function(id, tbl_name, contrasts) {
+  ns <- NS(id)
+
+  # be robust if contrasts is NULL/empty
+  if (is.null(contrasts)) contrasts <- character(0)
+  sel <- if (length(contrasts)) contrasts[[1]] else NULL
+
+  shinydashboard::box(
+    title = "Volcano", width = 12, solidHeader = TRUE, status = "info",
+    # SETTINGS
+    shiny::fluidRow(
+      shinydashboard::box(
+        title = "Settings", width = 5, solidHeader = TRUE, status = "info",
+        shinyWidgets::virtualSelectInput(
+          ns("comparison_volcano"), "Select Comparison:",
+          choices = contrasts, selected = sel
+        ),
+        shiny::selectizeInput(
+          ns("volcano_search"), "Search for Gene:", choices = NULL, multiple = TRUE
+        ),
+        # shinyWidgets::chooseSliderSkin("Flat", color = "#3d8dbc"),
+        # −log10(FDR) scale to match pcut <- 10^(-pcut)
+        #shiny::sliderInput(
+        shiny::numericInput(
+          ns("volcano_pcutoff"), "FDR Threshold:",
+          min = 0, max = 1, value = 0.05, step = 0.01
+        ),
+        shiny::numericInput(
+          ns("volcano_fccutoff"), "FC Threshold:",
+          min = 0, max = 10, value = 1, step = 0.1
+        ),
+        shinyWidgets::actionBttn(
+          ns("compute_volcano"),
+          shiny::span("Compute Volcano", style = "color: white;"),
+          style = "simple", color = "primary", size = "sm"
+        )
+      ),
+      shinydashboard::box(
+        title = "Volcano Plot", width = 7, solidHeader = TRUE, status = "info",
+        uiOutput(ns("volcano_slot"))
+      )
+    ),
+    h5(),
+    shinydashboard::box(
+      title = "Significant Genes", width = 12, solidHeader = TRUE,
+      status = "info", collapsible = TRUE, collapsed = FALSE,
+      DT::DTOutput(ns("volcano_sig_table"))
+    )
+  )
 }
