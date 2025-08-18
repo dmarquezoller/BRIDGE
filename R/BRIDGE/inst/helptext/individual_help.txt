@@ -17,9 +17,12 @@ It provides a suite of interactive and static visualizations to help identify pa
 
   <li>
     <strong>DEP Heatmap:</strong> 
-    Uses differential expressed analyzed data to obtain a heatmap. For this plot you can also select if you want <strong>clustering</strong> and how many clusters. 
+    Uses differential expressed analyzed data to obtain a heatmap. For this plot you can also select different <strong>thresholds</strong> and if you want <strong>clustering</strong> and how many clusters. 
 
+    Once a heatmap has been computed, you will be provided with the <string>optimal number of clusters</strong> following the <i>Elbow rule</i>.
+    This value is only provided for the complete loaded table with default thresholds, changing the thresholds will not change this recommendation. 
     Below the plot you can also find a table with the processed values, including p-values or log fold changes.
+    The matrix needed for this heatmap is obtained through a heavy computation, thanks to this, this matrix is stored in the <strong>cache</strong> so the next time is much faster.
   </li>
 
   <li>

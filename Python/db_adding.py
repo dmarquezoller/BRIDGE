@@ -14,7 +14,7 @@ import pandas as pd
 #      strictly followed.                           #
 #   3. All the value columns must have an           #
 #      integer in the end specifying                #
-#      the replicate, preceded by a "_".           #
+#      the replicate, preceded by a "_".            #
 #      No more underscores must be used in the name.#
 #      For more separations, use other symbols.     #
 #        -i.e. X6.hpf_1                             #
@@ -27,14 +27,24 @@ import pandas as pd
 #   6. For phosphoproteomics an additional          #
 #      identifier is needed: the peptide with the   #
 #      mutation, and it has to be called pepG       #
-#      i.e. AAAGDEAGGsSR_p1_ac0                     #                
+#      i.e. AAAGDEAGGsSR_p1_ac0                     #
+#   7. If adding your own processed data ensure     #
+#      that its an object of class                  #
+#      SummarizedExperiment and that it has         #
+#      been done with the same columns that the     #
+#      raw table has (for matching reasons          #
+#      between cache key and tables).               #                
 #                                                   #
 #                                                   #
 #   * If any of these rules is not met for a        #
 #     table submited to the database, the app       #
 #     will most likely crash. Read them carefuly    #
 #     and ensure that your database meets all the   #
-#     requirements                                  #                            
+#     requirements                                  #
+#                                                   #
+#   IMPORTANT                                       #
+#      R packages required:                         #
+#       - storr, DBI, RSQLite                       #                            
 #                                                   #
 #####################################################
 
@@ -122,10 +132,35 @@ def main():
         INSERT OR REPLACE INTO table_metadata (table_name, identifier_columns, timepoint_columns)
         VALUES (?, ?, ?)
     """, (table_name, id_str, tp_str))
-
     conn.commit()
-    conn.close()
     print("Metadata added to 'table_metadata'.")
+
+    # === Step 8: Prompt addition of processed data ===
+    processed = input("\nDo you want to add processed data for the raw table? (y/n): ").strip().lower()
+    if processed == "y":
+        key = f'{table_name}_{"_".join(tp_cols)}_dep'
+        rds_path = input("Enter the path to the RDS file containing the processed R object: ").strip()
+        if not os.path.exists(rds_path):
+            print("RDS file does not exist.")
+        else:
+            import rpy2.robjects as ro
+            ro.r(f'''
+            library(storr)
+            # Load processed object from RDS
+            obj <- readRDS("{rds_path}")
+            con <- DBI::dbConnect(RSQLite::SQLite(), "{db_path}")
+            # Use connection 'conn' to the database and create cache object
+            cache <- storr::storr_dbi(
+                tbl_data = "storr_data",
+                tbl_keys = "storr_keys",
+                con = con
+            )      
+            # Store object with the generated key
+            cache$set(key = "{key}", value = obj)
+            ''')
+            print("Processed data added correctly to cache")
+    conn.close()
+    print("done")
 
 if __name__ == "__main__":
     main()

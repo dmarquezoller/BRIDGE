@@ -152,7 +152,7 @@ int_heatmap_server <- function(input, output, session, rv) {
         )
 
         output[[paste0("cluster_table_", tbl_name)]] <- DT::renderDT({
-          DT::datatable(df, options = list(scrollX = TRUE, pageLength = 5))
+          DT::datatable(df, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 5, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
         })
       })
     })

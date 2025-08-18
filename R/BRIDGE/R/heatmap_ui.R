@@ -27,7 +27,7 @@ raw_heatmap_ui <-function(tbl_name) {
                               h1(), 
                               shinyWidgets::actionBttn(paste0("compute_raw_ht_", tbl_name), shiny::span("Compute Raw Heatmap", style = "color: white;"), style = "simple", color = "primary", size = "sm"),
                               h3(),
-                              p("Have in mind that for big heatmaps it may take long.")
+                              p("Might take long for first time computation.")
                             )
                           )
                         )
@@ -51,6 +51,11 @@ dep_heatmap_ui  <- function(tbl_name) {
                            shiny::column(
                              width = 5,
                              h1(),
+                             p("Change thresholds"),
+                             shiny::numericInput(paste0("heatmap_pcutoff_", tbl_name), "FDR Threshold:", 
+                             min = 0, max = 10, value = 0.05, step = 0.01),
+                             shiny::numericInput(paste0("heatmap_fccutoff_", tbl_name), "FC Threshold:", 
+                             min = 0, max = 10, value = 1, step = 0.1),
                              p("Enable clustering:"),
                              shinyWidgets::switchInput(paste0("clustering_", tbl_name), value = T, onLabel = "YES", offLabel = "NO", width = 'auto'),
                              shiny::numericInput(paste0("num_clusters_", tbl_name), "Select Number of Clusters", min = 2, step = 1, value = 3),

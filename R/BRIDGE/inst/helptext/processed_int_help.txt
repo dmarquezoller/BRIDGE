@@ -87,11 +87,12 @@ clusters will be shown in the preview for the user to know and act accordingly.
 
     This visualization allows you to assess the correlation and agreement between layers. For example, whether up-regulated genes in one omics technique are also up-regulated in another omics technique. 
     Deviations from the diagonal line indicate discrepancies between datasets.
+
+    In case of integrating more than two tables, the user can select which comparison they want to see the plot for. The app computes all pairwise comparisons and will show them upon request.
     </li>
 
 </ul>
 
 <div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px; margin: 10px 0;">
-    All parts in the <em>Processed integration</em> work with two or more tables except the scatterplot, that requires a 2D integration and will only be rendered if the integration is done with two tables.
-    For same reason, it will not be rendered if one of the integrated tables is a phosphoproteomics table (1 gene - n peptides). This plot only works if we follow a 1:1 matching.
+    The LFC Scatterplot will not be rendered if one of the integrated tables is a phosphoproteomics table (1 gene - n peptides). This plot only works if we follow a 1:1 matching.
 </div>
