@@ -9,7 +9,7 @@ heatmap_ui <- function(id) {
 }
 
 #' @export
-RawheatmapUI <-function(id, tbl_name) {  #raw_heatmap_ui
+RawHeatmapUI <-function(id, tbl_name) {  #raw_heatmap_ui
                     ns <- NS(id)
                     shinydashboard::box(
                       title = "Raw Data Heatmap", width = 12, solidHeader = T, status = "info", 
