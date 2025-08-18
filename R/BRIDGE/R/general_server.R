@@ -247,7 +247,7 @@ server_function <- function(input, output, session, db_path){
             ),
             shiny::tabPanel("DEP Heatmap",
                      shiny::fluidRow(
-                        dep_heatmap_ui(tbl_name) #Function in heatmap_ui.R
+                        DepHeatmapUI("DepHeatmap",tbl_name) #Function in heatmap_ui.R
                      )
             ),
             shiny::tabPanel("Volcano Plot",
@@ -331,7 +331,7 @@ server_function <- function(input, output, session, db_path){
 
 ####### DEP HEATMAP ########
  
- dep_heatmap_server(input, output, session, rv, cache) #Function in heatmap_server.R
+ DepHeamtapServer("DepHeatmap", rv, cache) #Function in heatmap_server.R
 
 ###### TIMELINE PLOT #######
 
