@@ -272,8 +272,8 @@ server_function <- function(input, output, session, db_path){
             ),
             shiny::tabPanel("Enrichment analysis", 
                      shiny::fluidRow(
-                        enrichment_settings_ui(tbl_name, rv), 
-                        enrichment_plots_ui(tbl_name)
+                        EnrichmentSettingsUI("Enrichment",tbl_name, rv), 
+                        EnrichmentPlotsUI("Enrichment",tbl_name)
                      )
             ),
             shiny::tabPanel("PCA", 
@@ -320,7 +320,7 @@ server_function <- function(input, output, session, db_path){
 
 ##### ENRICHMENT PLOT ######
 
- enrichment_server(input, output, session, rv)
+ EnrichmentServer("Enrichment", rv)
 
 ############################
 

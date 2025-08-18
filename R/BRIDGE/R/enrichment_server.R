@@ -1,5 +1,8 @@
 #' @export
-enrichment_server <- function(input, output, session, rv) {
+EnrichmentServer <- function(id, rv) 
+    moduleServer(
+    id,
+    function(input, output, session){
     shiny::observe(
         lapply(rv$table_names, function(tbl_name) {
             shiny::observeEvent(input[[paste0("compute_enrichment_", tbl_name)]], {
@@ -40,3 +43,4 @@ enrichment_server <- function(input, output, session, rv) {
         })
     )
 }
+)

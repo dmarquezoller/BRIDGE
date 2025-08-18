@@ -2,7 +2,7 @@
 TimelineServer <- function(id, rv)
     moduleServer(
     id,
-    function(input, output, server) {
+    function(input, output, session) {
     shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
   
