@@ -2,6 +2,7 @@
 
 export(DepHeamtapServer)
 export(DepHeatmapUI)
+export(VolcanoUI)
 export(connect_db)
 export(cpm_normalization)
 export(data_server)

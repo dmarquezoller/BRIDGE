@@ -227,8 +227,10 @@ server_function <- function(input, output, session, db_path){
   #### MAIN UI FOR EACH TABLE #### (includes functions for heatmap ui)
 
   output$all_tables_ui <- shiny::renderUI({
-    shiny::req(length(rv$tables) > 0)
-
+    shiny::req(
+      length(rv$tables) > 0,
+      !is.null(rv$contrasts)
+    )
     lapply(rv$table_names, function(tbl_name) {
       shinydashboard::box(title=paste("Table: ", tbl_name), width=12, solidHeader = TRUE, status="primary", style="overflow-x: auto", collapsible = T, collapsed = F,
           shinydashboard::box(title="Table", width = 12, solidHeader = T, status = "primary", style= "overflow-x: auto", collapsible = T, collapsed = F,
@@ -252,35 +254,8 @@ server_function <- function(input, output, session, db_path){
             ),
             shiny::tabPanel("Volcano Plot",
                      shiny::fluidRow(
-                       shinydashboard::box(title = "Settings", width = 5, solidHeader = T, status = "info",
-                           shinyWidgets::virtualSelectInput(paste0("comparison_volcano_", tbl_name), "Select Comparison:", 
-                                              choices = rv$contrasts[[tbl_name]], 
-                                              selected = rv$contrasts[[tbl_name]][1]
-                                              ),
-                           shiny::selectizeInput(paste0("volcano_search_",tbl_name), "Search for Gene:",  choices = NULL, multiple=T),
-                           shinyWidgets::chooseSliderSkin("Flat", color="#3d8dbc"),
-                           shiny::numericInput(paste0("volcano_pcutoff_", tbl_name), "FDR Threshold:", 
-                                       min = 0, max = 10, value = 0.05, step = 0.01),
-                           shiny::numericInput(paste0("volcano_fccutoff_", tbl_name), "FC Threshold:", 
-                                       min = 0, max = 10, value = 1, step = 0.1),
-                           shinyWidgets::actionBttn(paste0("compute_volcano_", tbl_name), shiny::span("Compute  Volcano", style = "color: white;"), style = "simple", color = "primary", size = "sm")
-                       ),
-                       shinydashboard::box(
-                         title = "Volcano Plot", width = 7, solidHeader = TRUE, status = "info",
-                         shinycssloaders::withSpinner(
-                          plotly::plotlyOutput(paste0("volcano_", tbl_name)),
-                          type = 8,
-                          color = "#2b8cbe", 
-                          caption = "Loading..."
-                         )
-                       )
-                       
-                     ),
-                     shinydashboard::box(title="Significant Genes", width=12, solidHeader = T, status="info", collapsible = T, collapsed = F,
-                         h3(),
-                         DT::DTOutput(paste0("volcano_sig_table_", tbl_name)),
-                         h3()
-                     )
+                        VolcanoUI("DepHeatmap", tbl_name, rv$contrasts[[tbl_name]])
+                    )   
             ),
             shiny::tabPanel("Gene Expression", 
                      shiny::fluidRow(

@@ -69,7 +69,6 @@ DepHeamtapServer <- function(id, rv, cache)
             lapply(rv$table_names, function(tbl_name) {
             updateSelectizeInput(session, paste0("volcano_search_",tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
             updateSelectizeInput(session, paste0("search_gene_", tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
-
         #### TESTING NON BLOCKING
 
             volcano_plot <- ExtendedTask$new(function(deps) {
