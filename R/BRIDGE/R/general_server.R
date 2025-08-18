@@ -261,13 +261,13 @@ server_function <- function(input, output, session, db_path){
             ),
             shiny::tabPanel("Gene Expression", 
                      shiny::fluidRow(
-                        timeline_gene_search(tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
+                        TimelineGeneSearchUI("Timeline",tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
                      ),
                      shiny::fluidRow(
-                        timeline_plot(tbl_name) #Function for the ui of the timeline plot in timeline_ui.R
+                        TimelinePlotUI("Timeline",tbl_name) #Function for the ui of the timeline plot in timeline_ui.R
                      ), 
                      shiny::fluidRow(
-                        timeline_table(tbl_name) #Function for the ui of the timeline table in timeline_ui.R
+                        TimelineTableUI("Timeline",tbl_name) #Function for the ui of the timeline table in timeline_ui.R
                      )
             ),
             shiny::tabPanel("Enrichment analysis", 
@@ -312,7 +312,7 @@ server_function <- function(input, output, session, db_path){
 
 ###### TIMELINE PLOT #######
 
- timeline_server(input, output, session, rv) #Function in timeline_server.R
+ TimelineServer("Timeline", rv) #Function in timeline_server.R
   
 ######### PCA PLOT #########
 

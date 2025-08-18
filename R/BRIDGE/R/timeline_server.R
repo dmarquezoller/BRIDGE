@@ -1,5 +1,8 @@
 #' @export
-timeline_server <- function(input, output, session, rv) {
+TimelineServer <- function(id, rv)
+    moduleServer(
+    id,
+    function(input, output, server) {
     shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
   
@@ -169,3 +172,4 @@ timeline_server <- function(input, output, session, rv) {
     })
   })
 }
+) 

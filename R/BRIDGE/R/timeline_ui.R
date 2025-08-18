@@ -1,5 +1,6 @@
 #' @export
-timeline_gene_search <- function(tbl_name, rv) {
+TimelineGeneSearchUI <- function(id, tbl_name, rv) {
+    ns <- NS(id)
     if (rv$datatype[[tbl_name]] == "rnaseq") {
         scale_choices <- c("Continous", "Log-scale", "TPM", "FPKM", "TMM", "CPM")
     } else {
@@ -8,13 +9,13 @@ timeline_gene_search <- function(tbl_name, rv) {
         shinydashboard::box(
         title = "Gene Search", width = 6, solidHeader = TRUE, status = "info", 
         selectizeInput(
-            inputId = paste0("search_gene_", tbl_name),
+            inputId = ns(paste0("search_gene_", tbl_name)),
             label = "Search your gene of interest:",
             choices = NULL,
             multiple = TRUE
         ),
         shiny::selectInput(
-            inputId = paste0("scale_", tbl_name),
+            inputId = ns(paste0("scale_", tbl_name)),
             label = "Select scale:",
             choices = scale_choices,
             selected = "Continous"
@@ -23,21 +24,23 @@ timeline_gene_search <- function(tbl_name, rv) {
 }
 
 #' @export
-timeline_plot <- function(tbl_name) {
+TimelinePlotUI <- function(id, tbl_name) {
+    ns <- NS(id)
     shinydashboard::box(
         title="Expression Timeline", width = 12, solidHeader = T, status = "info",   
         h3(),
-        plotOutput(paste0("time_plot_", tbl_name)),
+        plotOutput(ns(paste0("time_plot_", tbl_name))),
         h3()
     )
 }
 
 #' @export
-timeline_table <- function(tbl_name) {
+TimelineTableUI <- function(id, tbl_name) {
+    ns <- NS(id)
     shinydashboard::box(
         title="Table Entries", width = 12, solidHeader = T, status = "info", style= "overflow-x: auto", collapsible = T, collapsed = F, 
         h3(), 
-        DT::DTOutput(paste0("time_plot_dt_", tbl_name), height = "300px"), 
+        DT::DTOutput(ns(paste0("time_plot_dt_", tbl_name)), height = "300px"), 
         h3()
     )
 }
