@@ -245,40 +245,40 @@ server_function <- function(input, output, session, db_path){
             id = "plotTabs", selected = "Raw Heatmap",
             shiny::tabPanel("Raw Heatmap", 
                      shiny::fluidRow(
-                        RawHeatmapUI("RawHeatmap", tbl_name) #Function in heatmap_ui.R
+                        RawHeatmapUI(paste0("RawHeatmap_", tbl_name), tbl_name) #Function in heatmap_ui.R
                       )
                     
             ),
             shiny::tabPanel("DEP Heatmap",
                      shiny::fluidRow(
-                        DepHeatmapUI("DepHeatmap",tbl_name) #Function in heatmap_ui.R
+                        DepHeatmapUI(paste0("DepHeatmap_", tbl_name),tbl_name) #Function in heatmap_ui.R
                      )
             ),
             shiny::tabPanel("Volcano Plot",
                      shiny::fluidRow(
-                        VolcanoUI("DepHeatmap", tbl_name, rv$contrasts[[tbl_name]])
+                        VolcanoUI(paste0("DepHeatmap_", tbl_name), tbl_name, rv$contrasts[[tbl_name]])
                     )   
             ),
             shiny::tabPanel("Gene Expression", 
                      shiny::fluidRow(
-                        TimelineGeneSearchUI("Timeline",tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
+                        TimelineGeneSearchUI(paste0("Timeline_", tbl_name),tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
                      ),
                      shiny::fluidRow(
-                        TimelinePlotUI("Timeline",tbl_name) #Function for the ui of the timeline plot in timeline_ui.R
+                        TimelinePlotUI(paste0("Timeline_", tbl_name),tbl_name) #Function for the ui of the timeline plot in timeline_ui.R
                      ), 
                      shiny::fluidRow(
-                        TimelineTableUI("Timeline",tbl_name) #Function for the ui of the timeline table in timeline_ui.R
+                        TimelineTableUI(paste0("Timeline_", tbl_name),tbl_name) #Function for the ui of the timeline table in timeline_ui.R
                      )
             ),
             shiny::tabPanel("Enrichment analysis", 
                      shiny::fluidRow(
-                        EnrichmentSettingsUI("Enrichment",tbl_name, rv), 
-                        EnrichmentPlotsUI("Enrichment",tbl_name)
+                        EnrichmentSettingsUI(paste0("Enrichment_", tbl_name),tbl_name, rv), 
+                        EnrichmentPlotsUI(paste0("Enrichment_", tbl_name),tbl_name)
                      )
             ),
             shiny::tabPanel("PCA", 
                     shiny::fluidRow(
-                      pcaUI("pca", tbl_name)
+                      pcaUI(paste0("pca_", tbl_name), tbl_name)
                     )
             )
           )
@@ -304,23 +304,23 @@ server_function <- function(input, output, session, db_path){
 
 ####### RAW HEATMAP ########
 
- RawHeatmapServer("RawHeatmap", rv) #Function in heatmap_server.R
+ RawHeatmapServer(paste0("RawHeatmap_", tbl_name), rv) #Function in heatmap_server.R
 
 ####### DEP HEATMAP ########
  
- DepHeamtapServer("DepHeatmap", rv, cache) #Function in heatmap_server.R
+ DepHeamtapServer(paste0("DepHeatmap_", tbl_name), rv, cache) #Function in heatmap_server.R
 
 ###### TIMELINE PLOT #######
 
- TimelineServer("Timeline", rv) #Function in timeline_server.R
+ TimelineServer(paste0("Timeline_", tbl_name), rv) #Function in timeline_server.R
   
 ######### PCA PLOT #########
 
- pcaServer("pca", rv) #Function in pca_server.R
+ pcaServer(paste0("pca_", tbl_name), rv) #Function in pca_server.R
 
 ##### ENRICHMENT PLOT ######
 
- EnrichmentServer("Enrichment", rv)
+ EnrichmentServer(paste0("Enrichment_", tbl_name), rv)
 
 ############################
 
