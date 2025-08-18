@@ -9,14 +9,15 @@ heatmap_ui <- function(id) {
 }
 
 #' @export
-raw_heatmap_ui <-function(tbl_name) { 
+RawheatmapUI <-function(id, tbl_name) {  #raw_heatmap_ui
+                    ns <- NS(id)
                     shinydashboard::box(
                       title = "Raw Data Heatmap", width = 12, solidHeader = T, status = "info", 
                         shiny::fluidRow(
                             shiny::column(
                               width = 7, 
                               shinycssloaders::withSpinner(
-                                plotOutput(paste0("raw_ht_", tbl_name), width = "500px", height = "500px"), 
+                                plotOutput(ns(paste0("raw_ht_", tbl_name)), width = "500px", height = "500px"), 
                                 type = 8, 
                                 color = "#2b8cbe",
                                 caption = "Loading..."
@@ -25,7 +26,7 @@ raw_heatmap_ui <-function(tbl_name) {
                             shiny::column(
                               width = 5, 
                               h1(), 
-                              shinyWidgets::actionBttn(paste0("compute_raw_ht_", tbl_name), shiny::span("Compute Raw Heatmap", style = "color: white;"), style = "simple", color = "primary", size = "sm"),
+                              shinyWidgets::actionBttn(ns(paste0("compute_raw_ht_", tbl_name)), shiny::span("Compute Raw Heatmap", style = "color: white;"), style = "simple", color = "primary", size = "sm"),
                               h3(),
                               p("Might take long for first time computation.")
                             )

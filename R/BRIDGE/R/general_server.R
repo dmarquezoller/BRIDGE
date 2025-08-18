@@ -175,7 +175,9 @@ server_function <- function(input, output, session, db_path){
         }
         cache$set(cache_key, dep_output)
     }
+    print(dep_output)
     rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
+    print(rd_names)
     sig_cols <- grep("_significant$", rd_names, value = TRUE)
     valid_contrasts <- sub("_significant$", "", sig_cols) 
     rv$dep_output[[table_id]] <- dep_output
@@ -243,7 +245,7 @@ server_function <- function(input, output, session, db_path){
             id = "plotTabs", selected = "Raw Heatmap",
             shiny::tabPanel("Raw Heatmap", 
                      shiny::fluidRow(
-                        raw_heatmap_ui(tbl_name) #Function in heatmap_ui.R
+                        RawHeatmapUI("RawHeatmap", tbl_name) #Function in heatmap_ui.R
                       )
                     
             ),
@@ -302,7 +304,7 @@ server_function <- function(input, output, session, db_path){
 
 ####### RAW HEATMAP ########
 
- raw_heatmap_server(input, output, session, rv) #Function in heatmap_server.R
+ RawHeatmapServer("RawHeatmap", rv) #Function in heatmap_server.R
 
 ####### DEP HEATMAP ########
  

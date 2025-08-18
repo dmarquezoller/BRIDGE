@@ -22,7 +22,7 @@ dep2_phosphoproteomics <- function(df, tbl_name, rv) {
   norm_phos <- DEP2::normalize_vsn(impute_phos)
   diff_phos <- DEP2::test_diff(norm_phos, type = "all", fdr.type = "BH")
   sig_phos <- DEP2::add_rejections(diff_phos, alpha = 10^-0.05, lfc = 1)
-  return(diff_phos)
+  return(sig_phos)
 }
 
 #' @export

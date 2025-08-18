@@ -13,7 +13,10 @@ heatmap_server <- function(id, rv) {
 }
 
 #' @export
-raw_heatmap_server <- function(input, output, session, rv) {
+RawHeatmapServer <- function(id, rv) 
+    moduleServer(
+    id,
+    function(input, output, session){
     shiny::observe({
     lapply(rv$table_names, function(tbl_name) {
 
@@ -56,7 +59,8 @@ raw_heatmap_server <- function(input, output, session, rv) {
         })       
     })
   })
-}
+  }
+)
 
 
 #### THIS FUNCTION CONTAINS BOTH THE SERVER FOR THE DEP HEATMAP AND THE VOLCANO (because both use the dep_output)
