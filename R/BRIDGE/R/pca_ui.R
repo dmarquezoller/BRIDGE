@@ -1,5 +1,6 @@
 #' @export
-pca_ui <- function(tbl_name) {
+pcaUI <- function(id, tbl_name) {
+  ns <- NS(id)
   shinydashboard::box(
     title = "PCA Analysis", width = 12, solidHeader = TRUE, status = "info",
     shiny::fluidRow(
@@ -8,7 +9,7 @@ pca_ui <- function(tbl_name) {
        shiny::div(
           style = "text-align: center; margin-bottom: 20px;",
           shinyWidgets::actionBttn(
-            inputId = paste0("compute_pca_", tbl_name),
+            inputId = ns(paste0("compute_pca_", tbl_name)),
             label = shiny::span("Compute PCA", style = "color: white;"),
             style = "simple",
             color = "primary",
@@ -22,7 +23,7 @@ pca_ui <- function(tbl_name) {
         width = 12,
        shiny::div(
           style = "padding: 10px;",
-          plotOutput(outputId = paste0("pca_", tbl_name)),
+          plotOutput(outputId = ns(paste0("pca_", tbl_name))),
         )
       )
     )

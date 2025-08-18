@@ -1,5 +1,8 @@
 #' @export
-pca_server <- function(input, output, session, rv) {
+pcaServer <- function(id, rv) 
+    moduleServer(
+    id,
+    function(input, output, session){
     shiny::observe({
         lapply(rv$table_names, function(tbl_name) {
             shiny::observeEvent(input[[paste0("compute_pca_", tbl_name)]], {
@@ -12,3 +15,4 @@ pca_server <- function(input, output, session, rv) {
         })
     })
 }
+)

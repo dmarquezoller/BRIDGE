@@ -278,7 +278,7 @@ server_function <- function(input, output, session, db_path){
             ),
             shiny::tabPanel("PCA", 
                     shiny::fluidRow(
-                      pca_ui(tbl_name)
+                      pcaUI("pca", tbl_name)
                     )
             )
           )
@@ -316,7 +316,7 @@ server_function <- function(input, output, session, db_path){
   
 ######### PCA PLOT #########
 
- pca_server(input, output, session, rv) #Function in pca_server.R
+ pcaServer("pca", rv) #Function in pca_server.R
 
 ##### ENRICHMENT PLOT ######
 
