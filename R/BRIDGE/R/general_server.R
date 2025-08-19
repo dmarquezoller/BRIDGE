@@ -128,11 +128,23 @@ server_function <- function(input, output, session, db_path){
   
   # Server side of loading the data, selecting the desired columns 
   shiny::observeEvent(input$load_data, {
+
+    showModal(modalDialog(
+      title = "Loading",
+      "Please wait, loading the table...",
+      footer = NULL,
+      easyClose = FALSE
+    ))
+
+
     shiny::req(input$selected_table, input$timepoints_selected)
 
     meta <- table_metadata()
     annotation <- annotation_metadata()
-    if (is.null(meta)) return()
+    if (is.null(meta)) {
+      removeModal()
+      return()
+    }
     # Always include identifiers
     id_cols <- trimws(unlist(strsplit(meta$identifier_columns, ",")))
     timepoint_cols <- trimws(input$timepoints_selected)
@@ -184,7 +196,8 @@ server_function <- function(input, output, session, db_path){
     valid_contrasts <- sub("_significant$", "", sig_cols) 
     rv$dep_output[[table_id]] <- dep_output
     rv$contrasts[[table_id]] <- valid_contrasts
-       
+    
+    removeModal()
   })
   
   # DELETE DATA SELECTOR
