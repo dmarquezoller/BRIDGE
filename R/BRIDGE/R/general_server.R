@@ -179,9 +179,7 @@ server_function <- function(input, output, session, db_path){
         }
         cache$set(cache_key, dep_output)
     }
-    print(dep_output)
     rd_names <- colnames( SummarizedExperiment::rowData(dep_output))
-    print(rd_names)
     sig_cols <- grep("_significant$", rd_names, value = TRUE)
     valid_contrasts <- sub("_significant$", "", sig_cols) 
     rv$dep_output[[table_id]] <- dep_output

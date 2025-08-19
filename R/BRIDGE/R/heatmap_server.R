@@ -187,14 +187,77 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
       dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
 
+      
       if (isTRUE(clustering_enabled)) {
-        DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
+        ht <- DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
       } else {
-        DEP2::plot_heatmap(dep_output_filtered)
-      }    
+        ht <- DEP2::plot_heatmap(dep_output_filtered)
+      }  
+      row_order_list <- ComplexHeatmap::row_order(ht)
+      sig_se <- DEP2::get_signicant(dep_output_filtered)
+      rdat <- as.data.frame(SummarizedExperiment::rowData(sig_se))
+      heatmap_ids <- rdat$Gene_Name
+
+      # Map each row to a cluster
+      cluster_of_index <- rep(NA_integer_, length(heatmap_ids))
+      for (cl in seq_along(row_order_list)) {
+        cluster_of_index[row_order_list[[cl]]] <- cl
+      }
+
+      # Build mapper: gene name <-> cluster
+      gene_cluster_mapper <- data.frame(
+      Gene_Name = heatmap_ids,
+      Cluster = cluster_of_index,
+      stringsAsFactors = FALSE
+      )
+
+      # Store it in rv for later use
+      rv$gene_cluster[[tbl_name]] <- gene_cluster_mapper
+
+
+      #Creation of annotation
+      mat_ordered <- as.matrix(SummarizedExperiment::assay(sig_se))  # rows = significant genes
+      cluster_vec <- gene_cluster_mapper$Cluster
+      cluster_ids <- split(seq_len(nrow(mat_ordered)), cluster_vec)
+
+      line_profiles <- t(vapply(cluster_ids, function(idxs) {
+          colMeans(mat_ordered[idxs, , drop = FALSE], na.rm = TRUE)
+      }, FUN.VALUE = numeric(ncol(mat_ordered))))
+
+      # Normalize trends for plotting
+      line_profiles_norm <- t(apply(line_profiles, 1, function(x) {
+          rng <- range(x, na.rm = TRUE)
+          if (diff(rng) == 0) rep(0.5, length(x)) else (x - rng[1]) / diff(rng)
+      }))
+
+      trend_anno <- ComplexHeatmap::rowAnnotation(trend = ComplexHeatmap::anno_link(
+            align_to = gene_cluster_mapper$Cluster,
+            which = "row",
+            panel_fun = function(index, nm) {
+             grid::grid.rect()
+             grid::grid.lines(
+                x = seq_len(ncol(line_profiles_norm)) / ncol(line_profiles_norm),
+                y = line_profiles_norm[as.integer(nm), ],
+                gp =ggfun::gpar(col = "#2b8cbe", lwd = 1)
+              )
+            },
+            side = "right",
+            size = unit(3, "cm"),
+            width = unit(5, "cm")
+      ))
+
+      if (isTRUE(clustering_enabled)) {
+        ht <- DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters, right_annotation = trend_anno)
+      } else {
+        ht <- DEP2::plot_heatmap(dep_output_filtered)
+      }  
+      ComplexHeatmap::draw(ht)
     })
 
     output$ht_sig <- DT::renderDT({
+      req(rv$gene_cluster[[tbl_name]])
+      cluster_mapper <- isolate(rv$gene_cluster[[tbl_name]])
+      clustering_enabled <- input$clustering
       res <- get_dep_result(); req(res)
       key <- rv$current_dep_heatmap_key[[tbl_name]]
       if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
@@ -206,15 +269,18 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
       SummarizedExperiment::rowData(dep_output) <- rd    
 
-      #row_order_list <- ComplexHeatmap::row_order(ht)
-      gene_names <- SummarizedExperiment::rowData(dep_output)$Gene_Name
+      dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
 
-      cluster_assignments <- rep(NA, length(gene_names))    
-      for (cl in seq_along(row_order_list)) {
-        cluster_assignments[row_order_list[[cl]]] <- cl
+      rd <- SummarizedExperiment::rowData(dep_output_filtered)
+      sig_genes <- rd$Gene_Name[rd$significant]  # only TRUE
+
+      df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE]
+
+      if (isTRUE(clustering_enabled)){
+      df_filtered <- df_filtered %>%
+        dplyr::left_join(cluster_mapper, by = "Gene_Name") %>%
+        dplyr::select(Gene_Name, Cluster, dplyr::everything())
       }
-      res$df$Clusters <- cluster_assignments
-      df_filtered <- res$df[res$df$Gene_Name %in% gene_names, , drop = FALSE]
 
       DT::datatable(df_filtered, extensions="Buttons",
                     options=list(scrollX=TRUE, pageLength=10,
