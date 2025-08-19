@@ -67,7 +67,7 @@ RawHeatmapServer <- function(id, rv, tbl_name) {
 }
 
 
-#### THIS FUNCTION CONTAINS BOTH THE SERVER FOR THE DEP HEATMAP AND THE VOLCANO (because both use the dep_output)
+#### THIS FUNCTION CONTAINS THE SERVER FOR THE DEP HEATMAP
 #' @export
 DepHeatmapServer <- function(id, rv, cache, tbl_name) {
   moduleServer(id, function(input, output, session) {
@@ -76,7 +76,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
     heatmap_task <- ExtendedTask$new(function(ht_inps) {
         promises::future_promise({
-            stored_k   <- ht_inps$stored_k
+            #stored_k   <- ht_inps$stored_k
             dep_output <- ht_inps$dep_output
             mat <- as.matrix(ht_inps$ht_matrix)
             # drop rows with <2 finite values
@@ -87,21 +87,33 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             tmp <- tempfile(fileext = ".pdf")
             pdf(tmp); on.exit({ dev.off(); unlink(tmp) }, add = TRUE)
 
-            optimal_k <- if (is.null(stored_k)) {
-                elbow <- NbClust::NbClust(
-                    mat, distance = "euclidean",
-                    min.nc = 2, max.nc = 10,
-                    method = "kmeans",
-                    index  = "ch"       # <- pick one index; avoids Beale/pf() path
-                )
-                as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing=TRUE)[1]))
-            } else stored_k
+            # Guard against very small matrices
+            if (nrow(mat) < 2 || ncol(mat) < 2) {
+                return(list(optimal_k = NA_integer_, df = data.frame()))
+            }       
+
+            elbow <- NbClust::NbClust(
+                mat, distance = "euclidean",
+                min.nc = 2, max.nc = 10,
+                method = "kmeans",
+                index  = "ch"       # <- pick one index; avoids Beale/pf() path
+            )
+            # Compute optimal_k robustly regardless of Best.nc shape
+            best <- elbow$Best.nc
+            if (is.matrix(best)) {
+                k_vec <- as.integer(best[1, ])
+                # mode of candidate ks
+                optimal_k <- as.integer(names(which.max(table(k_vec))))
+            } else {
+                # single index (e.g. "ch") returns a vector
+                optimal_k <- as.integer(best[1])
+            }
 
             dep_pg_sig <- DEP2::get_signicant(dep_output)
             expr       <- SummarizedExperiment::assay(dep_pg_sig)
             gene_info  <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
             df         <- cbind(gene_info, as.data.frame(expr))
-            df         <- df[, c(colnames(gene_info), colnames(expr))]
+            df         <- df[, c(colnames(gene_info), colnames(expr)), drop = FALSE]
             df         <- stats::na.omit(df)
 
             list(optimal_k=optimal_k, df=df)
@@ -124,7 +136,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       num_clusters       <- isolate(input$num_clusters)
       dep_output         <- isolate(rv$dep_output[[tbl_name]])
       ht_matrix          <- isolate(rv$ht_matrix[[tbl_name]])
-      stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
+      #stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
       columns_key        <- paste(isolate(rv$time_cols[[tbl_name]]), collapse = "_")
 
       key <- if (isTRUE(clustering_enabled)) {
@@ -135,7 +147,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       rv$current_dep_heatmap_key[[tbl_name]] <- key
 
       if (!cache$exists(key)) {
-        heatmap_task$invoke(list(dep_output=dep_output, ht_matrix=ht_matrix, stored_k=stored_k))
+        heatmap_task$invoke(list(dep_output=dep_output, ht_matrix=ht_matrix))  #, stored_k=stored_k))
       }
     }, ignoreInit = TRUE)
 
@@ -159,12 +171,14 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       req(rv$dep_output[[tbl_name]])
       clustering_enabled <- input$clustering
       num_clusters       <- input$num_clusters
-      p_cut <- input$heatmap_pcutoff
+      p_cut   <- input$heatmap_pcutoff
       lfc_cut <- input$heatmap_fccutoff
 
       res <- get_dep_result(); req(res)
       key <- rv$current_dep_heatmap_key[[tbl_name]]
       if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+
+      if(is.na(res$optimal_k)){showNotification("The chosen cutoffs leave too few rows in the matrix for sensible optimal k calculation, please consider relaxing your cutoffs")}
 
       dep_output <- rv$dep_output[[tbl_name]]
       rd <- SummarizedExperiment::rowData(dep_output)
@@ -174,11 +188,10 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
 
       if (isTRUE(clustering_enabled)) {
-        ht <- DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
+        DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
       } else {
-        ht <- DEP2::plot_heatmap(dep_output_filtered)
-      }
-      ComplexHeatmap::draw(ht)
+        DEP2::plot_heatmap(dep_output_filtered)
+      }    
     })
 
     output$ht_sig <- DT::renderDT({
@@ -187,13 +200,13 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
 
       dep_output   <- rv$dep_output[[tbl_name]]
-      p_cut <- 10^(-input$heatmap_pcutoff); lfc_cut <- input$heatmap_fccutoff
+      p_cut <- input$heatmap_pcutoff; lfc_cut <- input$heatmap_fccutoff
 
       rd <- SummarizedExperiment::rowData(dep_output)
       rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
-      SummarizedExperiment::rowData(dep_output) <- rd
+      SummarizedExperiment::rowData(dep_output) <- rd    
 
-      row_order_list <- ComplexHeatmap::row_order(ht)
+      #row_order_list <- ComplexHeatmap::row_order(ht)
       gene_names <- SummarizedExperiment::rowData(dep_output)$Gene_Name
 
       cluster_assignments <- rep(NA, length(gene_names))    
@@ -201,8 +214,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         cluster_assignments[row_order_list[[cl]]] <- cl
       }
       res$df$Clusters <- cluster_assignments
-
-      df_filtered <- res$df[res$df$Gene_Name %in% gene_names, ]
+      df_filtered <- res$df[res$df$Gene_Name %in% gene_names, , drop = FALSE]
 
       DT::datatable(df_filtered, extensions="Buttons",
                     options=list(scrollX=TRUE, pageLength=10,

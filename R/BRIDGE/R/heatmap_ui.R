@@ -41,7 +41,7 @@ DepHeatmapUI <- function(id, tbl_name) {
     fluidRow(
       column(
         width = 7,
-        uiOutput(ns("ht_slot"))   # <- no spinner here
+        uiOutput(ns("ht_slot"))
       ),
       column(
         width = 5,
