@@ -2,7 +2,7 @@ TimelineUI <- function(id, tbl_name) {
   ns <- NS(id)
   tagList(
     shinydashboard::box(
-      title = "Timeline", width = 12, solidHeader = TRUE, status = "primary",
+      title = "Timeline", width = 12, solidHeader = TRUE, status = "info",
       fluidRow(
         column(4, selectizeInput(ns("search_gene"), "Gene(s)", choices = NULL, multiple = TRUE)),
         column(4, selectInput(ns("scale"), "Scale",
