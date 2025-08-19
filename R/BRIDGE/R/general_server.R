@@ -4,6 +4,10 @@ server_function <- function(input, output, session, db_path){
   #### DATA RETRIEVING SERVER ####
 
   con <- connect_db(db_path)
+  session$onSessionEnded(function() {
+    try(DBI::dbDisconnect(con), silent = TRUE)
+  })
+  
   all_tables <- DBI::dbListTables(con)
   
   #creation of cache starr object
@@ -228,64 +232,48 @@ server_function <- function(input, output, session, db_path){
 
   #### MAIN UI FOR EACH TABLE #### (includes functions for heatmap ui)
 
-  output$all_tables_ui <- shiny::renderUI({
-    shiny::req(
-      length(rv$tables) > 0,
-      !is.null(rv$contrasts)
-    )
-    lapply(rv$table_names, function(tbl_name) {
-      shinydashboard::box(title=paste("Table: ", tbl_name), width=12, solidHeader = TRUE, status="primary", style="overflow-x: auto", collapsible = T, collapsed = F,
-          shinydashboard::box(title="Table", width = 12, solidHeader = T, status = "primary", style= "overflow-x: auto", collapsible = T, collapsed = F,
-              h3(),
-              DT::DTOutput(paste0("table_", tbl_name)),
-              h3()              
-          ),
-          shinydashboard::tabBox(
-            title = shinyWidgets::actionBttn("individual_help", "Help", color = "primary" ,icon=shiny::icon("question-circle"), size="sm", style = "bordered"), width = 12,
-            id = "plotTabs", selected = "Raw Heatmap",
-            shiny::tabPanel("Raw Heatmap", 
-                     shiny::fluidRow(
-                        RawHeatmapUI(paste0("RawHeatmap_", tbl_name), tbl_name) #Function in heatmap_ui.R
-                      )
-                    
-            ),
-            shiny::tabPanel("DEP Heatmap",
-                     shiny::fluidRow(
-                        DepHeatmapUI(paste0("DepHeatmap_", tbl_name),tbl_name) #Function in heatmap_ui.R
-                     )
-            ),
-            shiny::tabPanel("Volcano Plot",
-                     shiny::fluidRow(
-                        VolcanoUI(paste0("DepHeatmap_", tbl_name), tbl_name, rv$contrasts[[tbl_name]])
-                    )   
-            ),
-            shiny::tabPanel("Gene Expression", 
-                     shiny::fluidRow(
-                        TimelineGeneSearchUI(paste0("Timeline_", tbl_name),tbl_name, rv) #Function for the ui of the timeline search in timeline_ui.R
-                     ),
-                     shiny::fluidRow(
-                        TimelinePlotUI(paste0("Timeline_", tbl_name),tbl_name) #Function for the ui of the timeline plot in timeline_ui.R
-                     ), 
-                     shiny::fluidRow(
-                        TimelineTableUI(paste0("Timeline_", tbl_name),tbl_name) #Function for the ui of the timeline table in timeline_ui.R
-                     )
-            ),
-            shiny::tabPanel("Enrichment analysis", 
-                     shiny::fluidRow(
-                        EnrichmentSettingsUI(paste0("Enrichment_", tbl_name),tbl_name, rv), 
-                        EnrichmentPlotsUI(paste0("Enrichment_", tbl_name),tbl_name)
-                     )
-            ),
-            shiny::tabPanel("PCA", 
-                    shiny::fluidRow(
-                      pcaUI(paste0("pca_", tbl_name), tbl_name)
-                    )
-            )
-          )
+  output$all_tables_ui <- renderUI({
+  req(length(rv$tables) > 0, !is.null(rv$contrasts))
+  tagList(lapply(rv$table_names, function(tbl_name) {
+    shinydashboard::box(
+      title = paste("Table:", tbl_name), width = 12, solidHeader = TRUE,
+      status = "primary", style = "overflow-x: auto", collapsible = TRUE,
+
+      shinydashboard::box(
+        title = "Table", width = 12, solidHeader = TRUE, status = "primary",
+        style = "overflow-x: auto", collapsible = TRUE,
+        h3(), DT::DTOutput(paste0("table_", tbl_name)), h3()
+      ),
+
+      shinydashboard::tabBox(
+        title = shinyWidgets::actionBttn(paste0("individual_help_", tbl_name),
+                 "Help", color = "primary", icon = icon("question-circle"),
+                 size = "sm", style = "bordered"),
+        width = 12, id = paste0("plotTabs_", tbl_name), selected = "Raw Heatmap",
+
+        tabPanel("Raw Heatmap",
+          fluidRow(RawHeatmapUI(paste0("RawHeatmap_", tbl_name), tbl_name))
+        ),
+        tabPanel("DEP Heatmap",
+          fluidRow(DepHeatmapUI(paste0("DepHeatmap_", tbl_name), tbl_name))
+        ),
+        tabPanel("Volcano Plot",
+          fluidRow(VolcanoUI(paste0("Volcano_", tbl_name), tbl_name, rv$contrasts[[tbl_name]]))
+        ),
+        tabPanel("Gene Expression",
+          fluidRow(TimelineUI(paste0("Timeline_", tbl_name), tbl_name))
+          # remove TimelineTableUI if merged
+        ),
+        tabPanel("Enrichment analysis",
+          fluidRow(EnrichmentUI(paste0("Enrichment_", tbl_name), tbl_name))
+        ),
+        tabPanel("PCA",
+          fluidRow(pcaUI(paste0("pca_", tbl_name), tbl_name))
+        )
       )
-      
-    })
-  })
+    )
+  }))
+})
 
   #### END OF MAIN UI FOR EACH TABLE ####
   
@@ -300,27 +288,60 @@ server_function <- function(input, output, session, db_path){
     })
   })
 
+ #RawHeatmapServer(paste0("RawHeatmap_", tbl_name), rv) #Function in heatmap_server.R
+wired <- reactiveValues(
+  timeline = character(),
+  raw      = character(),
+  dep      = character(),
+  pca      = character(),
+  enrich   = character()
+)
 
+# Helper predicates
+has_dep   <- function(tbl) !is.null(rv$dep_output[[tbl]])
+has_contr <- function(tbl) !is.null(rv$contrasts[[tbl]]) && length(rv$contrasts[[tbl]]) > 0
 
-####### RAW HEATMAP ########
+observeEvent(list(rv$table_names, rv$dep_output, rv$contrasts), ignoreInit = FALSE, {
+  tbls <- rv$table_names
 
- RawHeatmapServer(paste0("RawHeatmap_", tbl_name), rv) #Function in heatmap_server.R
+  for (tbl in tbls) {
+    # Always-ok modules (need raw table + time cols)
+    if (!(tbl %in% wired$timeline) && !is.null(rv$tables[[tbl]]) && !is.null(rv$time_cols[[tbl]])) {
+      TimelineServer(paste0("Timeline_", tbl), rv, tbl)
+      wired$timeline <- union(wired$timeline, tbl)
+    }
+    if (!(tbl %in% wired$raw) && !is.null(rv$tables[[tbl]])) {
+      RawHeatmapServer(paste0("RawHeatmap_", tbl), rv, tbl)
+      wired$raw <- union(wired$raw, tbl)
+    }
 
-####### DEP HEATMAP ########
- 
- DepHeamtapServer(paste0("DepHeatmap_", tbl_name), rv, cache) #Function in heatmap_server.R
+    # DEP / PCA depend on dep_output
+    if (!(tbl %in% wired$dep) && has_dep(tbl)) {
+      DepHeatmapServer(paste0("DepHeatmap_", tbl), rv, cache, tbl)
+      VolcanoServer(paste0("Volcano_", tbl), rv, tbl)
+      wired$dep <- union(wired$dep, tbl)
+    }
+    if (!(tbl %in% wired$pca) && has_dep(tbl)) {
+      pcaServer(paste0("pca_", tbl), rv, tbl)
+      wired$pca <- union(wired$pca, tbl)
+    }
 
-###### TIMELINE PLOT #######
+    # Enrichment also needs contrasts
+    if (!(tbl %in% wired$enrich) && has_dep(tbl) && has_contr(tbl)) {
+      EnrichmentServer(paste0("Enrichment_", tbl), rv, tbl)
+      wired$enrich <- union(wired$enrich, tbl)
+    }
+  }
+})
 
- TimelineServer(paste0("Timeline_", tbl_name), rv) #Function in timeline_server.R
-  
-######### PCA PLOT #########
-
- pcaServer(paste0("pca_", tbl_name), rv) #Function in pca_server.R
-
-##### ENRICHMENT PLOT ######
-
- EnrichmentServer(paste0("Enrichment_", tbl_name), rv)
+# Optional cleanup when a table is removed
+observeEvent(input$delete_data, {
+  wired$timeline <- setdiff(wired$timeline, input$remove)
+  wired$raw      <- setdiff(wired$raw, input$remove)
+  wired$dep      <- setdiff(wired$dep, input$remove)
+  wired$pca      <- setdiff(wired$pca, input$remove)
+  wired$enrich   <- setdiff(wired$enrich, input$remove)
+})
 
 ############################
 

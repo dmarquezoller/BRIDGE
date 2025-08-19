@@ -5,10 +5,15 @@ if(!require(BRIDGE)){
   library(BRIDGE)  
 }
 #library(future)
-library(future.callr)  # or future for multisession
-library(promises)
-library(tidyverse)
-library(shiny)
+suppressPackageStartupMessages({
+  library(future.callr)  # or future for multisession
+  library(promises)
+  library(tidyverse)
+  library(shiny)
+  library(DEP2); library(NbClust); library(SummarizedExperiment)
+  library(ggplot2); library(plotly)
+})
+#library(pool)
 #library(shinydashboard)
 #library(shinyWidgets)
 

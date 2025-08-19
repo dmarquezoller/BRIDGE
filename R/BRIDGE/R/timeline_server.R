@@ -1,175 +1,147 @@
 #' @export
-TimelineServer <- function(id, rv)
-    moduleServer(
-    id,
-    function(input, output, session) {
-    shiny::observe({
-    lapply(rv$table_names, function(tbl_name) {
-  
-    if (rv$datatype[[tbl_name]] == "phosphoproteomics") {
-      gene <- stringr::str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
+TimelineServer <- function(id, rv, tbl_name) {
+  moduleServer(id, function(input, output, session) {
+
+    # --- gene choices for this table ---
+    observe({
+      req(rv$tables[[tbl_name]])
+      # Prefer Gene_Name column; otherwise fall back to rownames
+      choices <- rv$tables[[tbl_name]][["Gene_Name"]]
+      if (is.null(choices)) choices <- rownames(rv$tables[[tbl_name]])
+      updateSelectizeInput(session, "search_gene", choices = choices, server = TRUE)
+    })
+
+    # --- normalization per table/scale ---
+    processed_data <- reactive({
+      req(rv$tables[[tbl_name]], input$scale)
       raw_data <- rv$tables[[tbl_name]]
-     shiny::req(input[[paste0("scale_", tbl_name)]])
-      scale_input <- input[[paste0("scale_", tbl_name)]]
-      if ( scale_input == "Total Intensity") {
-        processed_data <- total_intensity_normalization(raw_data)
-      } else if (scale_input == "Continous") {
-        processed_data <- raw_data
-      } else if (scale_input == "Log-scale") {
-        processed_data <- log2_transform(raw_data)
-      } else if (scale_input == "Median Normalization") {
-        processed_data <- median_normalization(raw_data)
-      } else if (scale_input == "FPKM") {
-        annotation <- rv$annotation[[tbl_name]]
-        processed_data <- fpkm_normalization(raw_data, annotation)
-      } else if (scale_input == "TMM") {
-        processed_data <- tmm_normalization(raw_data)
-      } else if (scale_input == "CPM") {
-        processed_data <- cpm_normalization(raw_data)
-      } else if (scale_input == "TPM") {
-        annotation <- rv$annotation[[tbl_name]]
-        fpkm_data <- fpkm_normalization(raw_data, annotation)
-        processed_data <- tpm_normalization(fpkm_data)
+      switch(input$scale,
+        "Total Intensity"        = total_intensity_normalization(raw_data),
+        "Continous"              = raw_data,
+        "Log-scale"              = log2_transform(raw_data),
+        "Median Normalization"   = median_normalization(raw_data),
+        "FPKM"                   = { req(rv$annotation[[tbl_name]]); fpkm_normalization(raw_data, rv$annotation[[tbl_name]]) },
+        "TMM"                    = tmm_normalization(raw_data),
+        "CPM"                    = cpm_normalization(raw_data),
+        "TPM"                    = { req(rv$annotation[[tbl_name]]); tpm_normalization(fpkm_normalization(raw_data, rv$annotation[[tbl_name]])) },
+        raw_data
+      )
+    })
+
+    genes_chosen <- reactive({
+      req(input$search_gene)
+      stringr::str_to_lower(trimws(input$search_gene))
+    })
+
+    unique_timepoints <- reactive({
+      req(rv$time_cols[[tbl_name]])
+      rv$time_cols[[tbl_name]] |>
+        gsub("_[0-9]+$", "", x = _) |>
+        gsub("[_.-]+$", "", x = _) |>
+        unique()
+    })
+
+    # --- long format for plotting (handles phospho vs others) ---
+    long_data <- reactive({
+      req(processed_data(), rv$time_cols[[tbl_name]])
+      dt <- processed_data()
+      tp <- rv$time_cols[[tbl_name]]
+      if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
+        df <- subset(dt, stringr::str_to_lower(Gene_Name) %in% genes_chosen())
+        validate(need(nrow(df) > 0, "No data found for the entered gene(s)."))
+        df$Gene_pepG <- paste(stringr::str_to_title(df$Gene_Name), df$pepG, sep = "_")
+        keep <- c("Gene_pepG", tp)
+        df <- df[, keep, drop = FALSE]
+        dl <- tidyr::pivot_longer(df, cols = -Gene_pepG, names_to = "Stage", values_to = "Expression")
+        dl$StageGroup <- factor(gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
+                                levels = unique_timepoints())
+        dl
+      } else {
+        df <- subset(dt, stringr::str_to_lower(Gene_Name) %in% genes_chosen())
+        validate(need(nrow(df) > 0, "No data found for the entered gene(s)."))
+        keep <- c("Gene_Name", tp)
+        df <- df[, keep, drop = FALSE]
+        dl <- tidyr::pivot_longer(df, cols = -Gene_Name, names_to = "Stage", values_to = "Expression")
+        dl$StageGroup <- factor(gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
+                                levels = unique_timepoints())
+        dl
       }
-      data <- subset(processed_data, stringr::str_to_lower(Gene_Name) %in% gene)
-      data$Gene_pepG <- paste(stringr::str_to_title(data$Gene_Name), data$pepG, sep = "_")
-      
-      timepoints <- c("Gene_pepG", rv$time_cols[[tbl_name]])
-      unique_timepoints <- rv$time_cols[[tbl_name]] %>%
-        gsub("_[0-9]+$", "", .) %>%  # Remove trailing _1, _2, etc.
-        gsub("[_.-]+$", "", .) %>%   # Clean up any extra underscores/dots
-        unique() 
-      data <- data[ ,timepoints]
-      
-      validate(need(nrow(data) > 0, "No data found for the entered gene(s)"))
-      data_long <- data %>%
-        pivot_longer(cols=-Gene_pepG, names_to = "Stage", values_to = "Expression") %>%
-        mutate(StageGroup = gsub("[0-9]+$", "", Stage) %>% gsub("[_.-]+$", "", .))
-      data_long$StageGroup <- factor(data_long$StageGroup, 
-                                     levels = unique_timepoints)
-      data_avg <- data_long %>%
-        group_by(StageGroup, Gene_pepG) %>%
-        summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
-      
-      output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
-        DT::datatable(data, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
-      })
-      
-      
-      output[[paste0("time_plot_", tbl_name)]] <- shiny::renderPlot({
-        
-        plot <- ggplot2::ggplot() +
-          # Plot individual replicates as dots (aligned vertically)
-          geom_point(data = data_long, 
-                     aes(x = StageGroup, y = Expression, color = as.factor(stringr::str_to_title(Gene_pepG))), 
-                     size = 3, alpha = 0.6) +  
-          
-          # Plot the mean expression line
-          geom_line(data = data_avg, 
-                    aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_pepG)), group = stringr::str_to_title(Gene_pepG)), 
-                    linewidth = 1.2) +
-          
-          # Add mean expression points (triangles)
-          geom_point(data = data_avg, 
-                     aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_pepG))), 
-                     size = 4, shape = 17) +
-          # Labels and theme
-          labs(
-            x = "Stage",
-            y = "log Expression",
-            title = paste("Peptide Expression Time Line", stringr::str_to_title(input[[paste0("search_gene_", tbl_name)]])),
-            color = "Proteins"
-          ) +
-          theme_minimal() +
-          theme(text = element_text(size = 14), axis.text.x = element_text(angle = 45, hjust= 1)) 
-        if (input[[paste0("scale_", tbl_name)]] == "Log-scale"){
-          plot <- plot + scale_y_log10()
-          
-        }
-        return(plot)
+    })
 
-        
-      })
-    }else{
-        gene <- stringr::str_to_lower(trimws(input[[paste0("search_gene_", tbl_name)]]))
-        raw_data <- rv$tables[[tbl_name]]
-       shiny::req(input[[paste0("scale_", tbl_name)]])
-        scale_input <- input[[paste0("scale_", tbl_name)]]
-        if ( scale_input == "Total Intensity") {
-          processed_data <- total_intensity_normalization(raw_data)
-        } else if (scale_input == "Continous") {
-          processed_data <- raw_data
-        } else if (scale_input == "Log-scale") {
-          processed_data <- log2_transform(raw_data)
-        } else if (scale_input == "Median Normalization") {
-          processed_data <- median_normalization(raw_data)
-        } else if (scale_input == "FPKM") {
-          annotation <- rv$annotation[[tbl_name]]
-          processed_data <- fpkm_normalization(raw_data, annotation)
-        } else if (scale_input == "TMM") {
-          processed_data <- tmm_normalization(raw_data)
-        } else if (scale_input == "CPM") {
-          processed_data <- cpm_normalization(raw_data)
-        } else if (scale_input == "TPM") {
-          annotation <- rv$annotation[[tbl_name]]
-          fpkm_data <- fpkm_normalization(raw_data, annotation)
-          processed_data <- tpm_normalization(fpkm_data)
-        }
-        data <- subset(processed_data, stringr::str_to_lower(Gene_Name) %in% gene)
-        timepoints <- c("Gene_Name", rv$time_cols[[tbl_name]])
-        unique_timepoints <- rv$time_cols[[tbl_name]] %>%
-          gsub("_[0-9]+$", "", .) %>%  # Remove trailing _1, _2, etc.
-          gsub("[_.-]+$", "", .) %>%   # Clean up any extra underscores/dots
-          unique() 
-        data <- data[ ,timepoints]
-        validate(need(nrow(data) > 0, "No data found for the entered gene(s)"))
+    # --- table output (wide) ---
+    output$time_plot_dt <- DT::renderDT({
+      df <- processed_data()
+      tp <- rv$time_cols[[tbl_name]]
+      if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
+        keep <- c("Gene_Name", "pepG", tp)
+      } else {
+        keep <- c("Gene_Name", tp)
+      }
+      DT::datatable(df[, keep, drop = FALSE],
+                    extensions = "Buttons",
+                    options = list(scrollX = TRUE, pageLength = 10,
+                                   dom = "Bfrtip",
+                                   buttons = c('copy','csv','excel','pdf','print')))
+    })
 
-        
-        data_long <- data %>%
-          pivot_longer(cols = -Gene_Name, names_to = "Stage", values_to = "Expression") %>%
-          mutate(StageGroup = gsub("[0-9]+$", "", Stage) %>% gsub("[_.-]+$", "", .))
-        data_long$StageGroup <- factor(data_long$StageGroup, 
-                                       levels = unique_timepoints)
-        data_avg <- data_long %>%
-          group_by(StageGroup, Gene_Name) %>%
-          summarize(MeanExpression = mean(Expression, na.rm=T), .groups = "drop")
-        
-        output[[paste0("time_plot_dt_", tbl_name)]] <- DT::renderDT({
-          DT::datatable(data, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
-        })
-        
-        output[[paste0("time_plot_",tbl_name)]] <- shiny::renderPlot({
-  
-            plot <- ggplot2::ggplot() +
-              # Plot individual replicates as dots (aligned vertically)
-              geom_point(data = data_long, 
-                         aes(x = StageGroup, y = Expression, color = as.factor(stringr::str_to_title(Gene_Name))), 
-                         size = 3, alpha = 0.6) +  
-              
-              # Plot the mean expression line
-              geom_line(data = data_avg, 
-                        aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_Name)), group = stringr::str_to_title(Gene_Name)), 
-                        linewidth = 1.2) +
-              
-              # Add mean expression points (triangles)
-              geom_point(data = data_avg, 
-                         aes(x = StageGroup, y = MeanExpression, color = as.factor(stringr::str_to_title(Gene_Name))), 
-                         size = 4, shape = 17) +
-              # Labels and theme
-              labs(
-                x = "Stage",
-                y = "log Expression",
-                title = paste("Protein Expression Time Line", stringr::str_to_title(input[[paste0("search_gene_", tbl_name)]])),
-                color = "Proteins"
-              ) +
-              theme_minimal() +
-              theme(text = element_text(size = 14), axis.text.x = element_text(angle = 45, hjust= 1)) 
-
-              
-            return(plot)
-        })
-    }
+    # --- plot output ---
+    output$time_plot <- renderPlot({
+      dl <- long_data()
+      if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
+        data_avg <- dplyr::summarise(dplyr::group_by(dl, StageGroup, Gene_pepG),
+                                     MeanExpression = mean(Expression, na.rm = TRUE),
+                                     .groups = "drop")
+        p <- ggplot2::ggplot() +
+          ggplot2::geom_point(data = dl,
+            ggplot2::aes(x = StageGroup, y = Expression,
+                         color = as.factor(stringr::str_to_title(Gene_pepG))),
+            size = 3, alpha = 0.6) +
+          ggplot2::geom_line(data = data_avg,
+            ggplot2::aes(x = StageGroup, y = MeanExpression,
+                         color = as.factor(stringr::str_to_title(Gene_pepG)),
+                         group = stringr::str_to_title(Gene_pepG)),
+            linewidth = 1.2) +
+          ggplot2::geom_point(data = data_avg,
+            ggplot2::aes(x = StageGroup, y = MeanExpression,
+                         color = as.factor(stringr::str_to_title(Gene_pepG))),
+            size = 4, shape = 17) +
+          ggplot2::labs(x = "Stage",
+                        y = "log Expression",
+                        title = paste("Peptide Expression Time Line",
+                                      stringr::str_to_title(input$search_gene)),
+                        color = "Proteins") +
+          ggplot2::theme_minimal() +
+          ggplot2::theme(text = ggplot2::element_text(size = 14),
+                         axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+        if (identical(input$scale, "Log-scale")) p <- p + ggplot2::scale_y_log10()
+        p
+      } else {
+        data_avg <- dplyr::summarise(dplyr::group_by(dl, StageGroup, Gene_Name),
+                                     MeanExpression = mean(Expression, na.rm = TRUE),
+                                     .groups = "drop")
+        ggplot2::ggplot() +
+          ggplot2::geom_point(data = dl,
+            ggplot2::aes(x = StageGroup, y = Expression,
+                         color = as.factor(stringr::str_to_title(Gene_Name))),
+            size = 3, alpha = 0.6) +
+          ggplot2::geom_line(data = data_avg,
+            ggplot2::aes(x = StageGroup, y = MeanExpression,
+                         color = as.factor(stringr::str_to_title(Gene_Name)),
+                         group = stringr::str_to_title(Gene_Name)),
+            linewidth = 1.2) +
+          ggplot2::geom_point(data = data_avg,
+            ggplot2::aes(x = StageGroup, y = MeanExpression,
+                         color = as.factor(stringr::str_to_title(Gene_Name))),
+            size = 4, shape = 17) +
+          ggplot2::labs(x = "Stage",
+                        y = "log Expression",
+                        title = paste("Protein Expression Time Line",
+                                      stringr::str_to_title(input$search_gene)),
+                        color = "Proteins") +
+          ggplot2::theme_minimal() +
+          ggplot2::theme(text = ggplot2::element_text(size = 14),
+                         axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+      }
     })
   })
 }
-) 

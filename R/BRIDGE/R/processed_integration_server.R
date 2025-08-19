@@ -148,8 +148,22 @@ processed_integration <- function(input, output, session, rv){
             intersected = dim_info[[tbl]]$intersected
             )
         })
-        elbow <- NbClust::NbClust(data_for_elbow, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans")
-        optimal_k <- as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
+        elbow <- NbClust::NbClust(
+                data_for_elbow, distance = "euclidean",
+                min.nc = 2, max.nc = 10,
+                method = "kmeans",
+                index  = "ch"       # <- pick one index; avoids Beale/pf() path
+        )
+        # Compute optimal_k robustly regardless of Best.nc shape
+        best <- elbow$Best.nc
+        if (is.matrix(best)) {
+            k_vec <- as.integer(best[1, ])
+            # mode of candidate ks
+            optimal_k <- as.integer(names(which.max(table(k_vec))))
+        } else {
+            # single index (e.g. "ch") returns a vector
+            optimal_k <- as.integer(best[1])
+        }
         rv$optimal_k <- optimal_k
         names(rv$integration_preview_dims) <- selected_tables
     })

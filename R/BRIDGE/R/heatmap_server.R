@@ -13,312 +13,224 @@ heatmap_server <- function(id, rv) {
 }
 
 #' @export
-RawHeatmapServer <- function(id, rv) 
-    moduleServer(
-    id,
-    function(input, output, session){
-    shiny::observe({
-    lapply(rv$table_names, function(tbl_name) {
+RawHeatmapServer <- function(id, rv, tbl_name) {
+  moduleServer(id, function(input, output, session) {
 
-        raw_heatmap_plot <- ExtendedTask$new(function(raw_input){
-            promises::future_promise({
-                raw_data <- raw_input$raw_data
-                timepoint_cols <- raw_input$timepoint_cols
-                datatype <- raw_input$datatype
+    ready <- reactiveVal(FALSE)
 
-                clean <- as.matrix(raw_data[timepoint_cols])
-                rn <- switch(datatype,
-                proteomics        = raw_data$Gene_Name,
-                rnaseq            = raw_data$Gene_Name,
-                phosphoproteomics = raw_data$pepG
-                )
-                rownames(clean) <- rn
-                list(clean_matrix = clean)
-            })
-        })
+    task <- ExtendedTask$new(function(raw_input) {
+      promises::future_promise({
+        raw_data       <- raw_input$raw_data
+        timepoint_cols <- raw_input$timepoint_cols
+        datatype       <- raw_input$datatype
 
-        shiny::observeEvent(input[[paste0("compute_raw_ht_", tbl_name)]], {
-  
-          raw_data <- isolate(rv$tables[[tbl_name]])
-          timepoint_cols <- isolate(rv$time_cols[[tbl_name]])
-          datatype <- isolate(rv$datatype[[tbl_name]])
+        clean <- as.matrix(raw_data[timepoint_cols])
+        rn <- switch(datatype,
+          proteomics        = raw_data$Gene_Name,
+          rnaseq            = raw_data$Gene_Name,
+          phosphoproteomics = raw_data$pepG
+        )
+        rownames(clean) <- rn
+        list(clean_matrix = clean)
+      })
+    })
 
-          raw_input <- list(
-            raw_data = raw_data,
-            timepoint_cols = timepoint_cols, 
-            datatype = datatype
-          )
+    observeEvent(input$compute, {
+      ready(TRUE)
+      task$invoke(list(
+        raw_data       = isolate(rv$tables[[tbl_name]]),
+        timepoint_cols = isolate(rv$time_cols[[tbl_name]]),
+        datatype       = isolate(rv$datatype[[tbl_name]])
+      ))
+    }, ignoreInit = TRUE)
 
-          raw_heatmap_plot$invoke(raw_input)
-        })
-          
-        output[[paste0("raw_ht_", tbl_name)]] <- shiny::renderPlot({
-            res <- raw_heatmap_plot$result()
-            shiny::req(res)
-            ComplexHeatmap::Heatmap(res$clean_matrix, show_row_dend = FALSE, show_row_names = FALSE)
-        })       
+    # Mount spinner only after "Compute" is pressed
+    output$plot_slot <- renderUI({
+      if (!ready()) {
+        return(div(style="padding:10px; color:#777;",
+                   "Click “Compute Raw Heatmap” to generate the plot."))
+      }
+      shinycssloaders::withSpinner(
+        plotOutput(session$ns("plot"), height = "520px"),
+        type = 8, color = "#2b8cbe", caption = "Loading..."
+      )
+    })
+
+    output$plot <- renderPlot({
+      res <- task$result()
+      req(res)
+      ComplexHeatmap::Heatmap(res$clean_matrix,
+                              show_row_dend = FALSE,
+                              show_row_names = FALSE)
     })
   })
-  }
-)
+}
 
 
-#### THIS FUNCTION CONTAINS BOTH THE SERVER FOR THE DEP HEATMAP AND THE VOLCANO (because both use the dep_output)
+#### THIS FUNCTION CONTAINS THE SERVER FOR THE DEP HEATMAP
 #' @export
-DepHeamtapServer <- function(id, rv, cache)
-    moduleServer(
-        id,
-        function(input, output, session) { 
-        shiny::observe({
-            lapply(rv$table_names, function(tbl_name) {
-            updateSelectizeInput(session, paste0("volcano_search_",tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
-            updateSelectizeInput(session, paste0("search_gene_", tbl_name), choices = rv$tables[[tbl_name]]$Gene_Name, server = TRUE)
-        #### TESTING NON BLOCKING
+DepHeatmapServer <- function(id, rv, cache, tbl_name) {
+  moduleServer(id, function(input, output, session) {
 
-            volcano_plot <- ExtendedTask$new(function(deps) {
-                promises::future_promise({
-                    dep_output <- deps$dep_output
-                    contrast   <- deps$contrast
-                    datatype   <- deps$datatype
-                    pcut       <- deps$pcut
-                    fccut      <- deps$fccut
-                    highlight  <- deps$highlight
+    heatmap_ready <- reactiveVal(FALSE)
 
-                    lfc_col <- paste0(contrast, "_diff")
-                    pval_col <- paste0(contrast, "_p.adj")
-                    res <- SummarizedExperiment::rowData(dep_output)
+    heatmap_task <- ExtendedTask$new(function(ht_inps) {
+        promises::future_promise({
+            #stored_k   <- ht_inps$stored_k
+            dep_output <- ht_inps$dep_output
+            mat <- as.matrix(ht_inps$ht_matrix)
+            # drop rows with <2 finite values
+            ok <- rowSums(is.finite(mat)) >= 2
+            mat <- mat[ok, , drop = FALSE]
+            
+            # open a throwaway graphics device to avoid device warnings (see 3)
+            tmp <- tempfile(fileext = ".pdf")
+            pdf(tmp); on.exit({ dev.off(); unlink(tmp) }, add = TRUE)
 
-                    if (datatype == "proteomics") {
-                        df <- data.frame(
-                            gene_names = stringr::str_to_title(res$Gene_Name),
-                            pval       = res[[pval_col]],
-                            log2FC     = res[[lfc_col]],
-                            stringsAsFactors = FALSE
-                    )
-                    sig_se   <- DEP2::get_signicant(dep_output, contrast)
-                    df_table <- DEP2::get_results(sig_se)
-                    } else if (datatype == "phosphoproteomics") {
-                        df <- data.frame(
-                            peptide = res$pepG,
-                            pval    = res[[pval_col]],
-                            log2FC  = res[[lfc_col]],
-                            stringsAsFactors = FALSE
-                    )
-                    sig_se   <- DEP2::get_signicant(dep_output, contrast)
-                    df_table <- DEP2::get_results(sig_se)
-                    } else { # rnaseq
-                        df <- data.frame(
-                            gene_ID = rownames(res),
-                            pval    = res[[pval_col]],
-                            log2FC  = res[[lfc_col]],
-                            stringsAsFactors = FALSE
-                    )
-                    df_table <- DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
-                    }
+            # Guard against very small matrices
+            if (nrow(mat) < 2 || ncol(mat) < 2) {
+                return(list(optimal_k = NA_integer_, df = data.frame()))
+            }       
 
-                    list(df = df, table = df_table, pcut = pcut, fccut = fccut, datatype = datatype, highlight = highlight)
-                })
-            })
-
-            shiny::observeEvent(input[[paste0("compute_volcano_", tbl_name)]], {
-                contrast <- isolate(input[[paste0("comparison_volcano_", tbl_name)]])
-                pcut <- isolate((input[[paste0("volcano_pcutoff_", tbl_name)]]))
-                fccut <- isolate(input[[paste0("volcano_fccutoff_", tbl_name)]])
-                highlight <- isolate(input[[paste0("volcano_search_", tbl_name)]]) %>%
-                str_split(",", simplify = TRUE) %>%
-                str_trim() %>%
-                stringr::str_to_title()
-                dep_output <- isolate(rv$dep_output[[tbl_name]])
-                datatype <- isolate(rv$datatype[[tbl_name]])
-
-                deps <- list(
-                contrast = contrast,
-                pcut = 10^(-pcut),
-                fccut = fccut,
-                highlight = highlight,
-                dep_output = dep_output,
-                datatype = datatype
-                )
-
-                volcano_plot$invoke(deps)
-            })
-
-            output[[paste0("volcano_", tbl_name)]] <- plotly::renderPlotly({
-                res <- volcano_plot$result()
-                shiny::req(res)
-
-                if (res$datatype == "proteomics") {
-                    text_col <- res$df$gene_names
-                    highlight <- res$highlight
-                    p <- EnhancedVolcano::EnhancedVolcano(
-                    res$df, lab = res$df$gene_names, selectLab = c("a"), x = "log2FC", y = "pval",
-                    title = "", pCutoff = res$pcut, FCcutoff = res$fccut, pointSize = ifelse(text_col %in% highlight, 3, 1),legendPosition = "none"
-                    ) + ggplot2::aes(text = gene_names) + ggplot2::labs(color="Legend")
-                } else if (res$datatype == "phosphoproteomics") {
-                    text_col <- res$df$peptide
-                    highlight <- res$highlight
-                    p <- EnhancedVolcano::EnhancedVolcano(
-                    res$df, lab = res$df$peptide, selectLab = c("a"), x = "log2FC", y = "pval",
-                    title = "", pCutoff = res$pcut, FCcutoff = res$fccut, pointSize = ifelse(text_col %in% highlight, 3, 1), legendPosition = "none"
-                    ) + ggplot2::aes(text = peptide) + ggplot2::labs(color="Legend")
-                } else {
-                    text_col <- res$df$gene_ID
-                    highlight <- res$highlight
-                    p <- EnhancedVolcano::EnhancedVolcano(
-                    res$df, lab = res$df$gene_ID, selectLab = c("a"), x = "log2FC", y = "pval",
-                    title = "", pCutoff = res$pcut, FCcutoff = res$fccut, pointSize = ifelse(text_col %in% highlight, 3, 1), legendPosition = "none"
-                    ) + ggplot2::aes(text = gene_ID) + ggplot2::labs(color="Legend")
-                }
-
-                # Build plotly on main
-                plotly::ggplotly(p + ggplot2::aes(x = log2FC, y = -log10(pval)), tooltip = "text")
-            })
-
-            output[[paste0("volcano_sig_table_", tbl_name)]] <- DT::renderDT({
-                res <- volcano_plot$result()
-                shiny::req(res)
-                DT::datatable(res$table, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
-            })
-
-
-
-        #### END OF TESTING NON BLOCKING
-
-            # One reactiveVal per table to hold the latest result
-            dep_res <- reactiveVal(NULL)
-
-            create_dep_heatmap <- ExtendedTask$new(function(ht_inps) {
-                promises::future_promise({
-                    ht_matrix  <- ht_inps$ht_matrix
-                    dep_output <- ht_inps$dep_output
-                    stored_k   <- ht_inps$stored_k
-                    optimal_k <- if (is.null(stored_k)) {
-                    elbow <- NbClust::NbClust(ht_matrix, distance = "euclidean",
-                                                min.nc = 2, max.nc = 10, method = "kmeans")
-                    as.numeric(names(sort(table(elbow$Best.nc[1, ]), decreasing = TRUE)[1]))
-                    } else stored_k
-
-                    dep_pg_sig <- DEP2::get_signicant(dep_output)
-                    expr       <- SummarizedExperiment::assay(dep_pg_sig)
-                    gene_info  <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
-                    df         <- cbind(gene_info, as.data.frame(expr))
-                    df         <- df[, c(colnames(gene_info), colnames(expr))]
-                    df         <- na.omit(df)
-                    list(optimal_k = optimal_k, df = df)
-                })
-            })
-
-
-            observeEvent(input[[paste0("recompute_heatmap_", tbl_name)]], {
-                clustering_enabled <- isolate(input[[paste0("clustering_", tbl_name)]])
-                num_clusters       <- isolate(input[[paste0("num_clusters_", tbl_name)]])
-                dep_output         <- isolate(rv$dep_output[[tbl_name]])
-                ht_matrix          <- isolate(rv$ht_matrix[[tbl_name]])
-                stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
-                heatmap_pval       <- isolate(input[[paste0("heatmap_pcutoff_", tbl_name)]])
-                heatmap_lfc        <- isolate(input[[paste0("heatmap_fccutoff_", tbl_name)]])
-                columns_key        <- paste(rv$time_cols[[tbl_name]], collapse = "_")
-
-                key <- if (isTRUE(clustering_enabled)) {
-                    paste(tbl_name, columns_key, paste0("clusters:", num_clusters), "dep_heatmap", sep = "_")
-                } else {
-                    paste(tbl_name, columns_key, "dep_heatmap", sep = "_")
-                }
-                rv$current_dep_heatmap_key[[tbl_name]] <- key  # stash the key for renderers
-
-                if (cache$exists(key)) {
-                    # Cached: nothing to compute; renderers will read from cache below.
-                    message("Loading DEP heatmap from cache: ", key)
-                } else {
-                    message("Computing and caching DEP heatmap: ", key)
-                    create_dep_heatmap$invoke(list(
-                        dep_output = dep_output,
-                        ht_matrix  = ht_matrix,
-                        stored_k   = stored_k
-                    ))
-                }
-            }, ignoreInit = TRUE)
-
-            # Helper to fetch the value either from cache or from the task result
-            get_dep_result <- function(tbl_name) {
-                key <- rv$current_dep_heatmap_key[[tbl_name]]
-                if (!is.null(key) && cache$exists(key)) {
-                    return(cache$get(key))
-                }
-                # not cached yet — if the task finished, result() will be non-NULL
-                create_dep_heatmap$result()
+            elbow <- NbClust::NbClust(
+                mat, distance = "euclidean",
+                min.nc = 2, max.nc = 10,
+                method = "kmeans",
+                index  = "ch"       # <- pick one index; avoids Beale/pf() path
+            )
+            # Compute optimal_k robustly regardless of Best.nc shape
+            best <- elbow$Best.nc
+            if (is.matrix(best)) {
+                k_vec <- as.integer(best[1, ])
+                # mode of candidate ks
+                optimal_k <- as.integer(names(which.max(table(k_vec))))
+            } else {
+                # single index (e.g. "ch") returns a vector
+                optimal_k <- as.integer(best[1])
             }
 
-            # Renderers: read result reactively; write to cache on the main thread once
-            output[[paste0("ht_", tbl_name)]] <- shiny::renderPlot({
-                # Ensure inputs used to build the plot are present (and for cache key)
-                clustering_enabled <- input[[paste0("clustering_", tbl_name)]]
-                num_clusters       <- input[[paste0("num_clusters_", tbl_name)]]
-                dep_output         <- rv$dep_output[[tbl_name]]
-                heatmap_pval       <- input[[paste0("heatmap_pcutoff_", tbl_name)]]
-                heatmap_lfc        <- input[[paste0("heatmap_fccutoff_", tbl_name)]]
-                p_cut              <- 10^(-heatmap_pval)
-                lfc_cut            <- heatmap_lfc
-                req(dep_output)  # avoid early NULLs
+            dep_pg_sig <- DEP2::get_signicant(dep_output)
+            expr       <- SummarizedExperiment::assay(dep_pg_sig)
+            gene_info  <- as.data.frame(SummarizedExperiment::rowData(dep_pg_sig))
+            df         <- cbind(gene_info, as.data.frame(expr))
+            df         <- df[, c(colnames(gene_info), colnames(expr)), drop = FALSE]
+            df         <- stats::na.omit(df)
 
-                res <- get_dep_result(tbl_name)
-                req(res)  # wait until we actually have data
+            list(optimal_k=optimal_k, df=df)
+      }, seed = TRUE)
+    })
 
-                # Cache-once guard
-                key <- rv$current_dep_heatmap_key[[tbl_name]]
-                if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-                # Build plot on main process
-
-                if (isTRUE(clustering_enabled)) {
-                    rd <- SummarizedExperiment::rowData(dep_output)
-                    rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
-                    SummarizedExperiment::rowData(dep_output) <- rd
-                    dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
-                    DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
-                } else {
-                    rd <- SummarizedExperiment::rowData(dep_output)
-                    rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
-                    SummarizedExperiment::rowData(dep_output) <- rd
-                    dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
-                    DEP2::plot_heatmap(dep_output_filtered)
-                }
-            })
-
-            output[[paste0("ht_sig", tbl_name)]] <- DT::renderDT({
-                res              <- get_dep_result(tbl_name)
-                dep_output       <- rv$dep_output[[tbl_name]]
-                heatmap_pval     <- input[[paste0("heatmap_pcutoff_", tbl_name)]]
-                heatmap_lfc      <- input[[paste0("heatmap_fccutoff_", tbl_name)]]
-                p_cut            <- 10^(-heatmap_pval)
-                lfc_cut          <- heatmap_lfc
-                req(res)
-                key <- rv$current_dep_heatmap_key[[tbl_name]]
-                if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-                rd <- SummarizedExperiment::rowData(dep_output)
-                rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
-                SummarizedExperiment::rowData(dep_output) <- rd
-                dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
-                gene_names <- SummarizedExperiment::rowData(dep_output)$Gene_Name
-                df_filtered <- res$df[res$df$Gene_Name %in% gene_names, ]
-                DT::datatable(df_filtered, extensions = "Buttons",options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
-            })
-
-            output[[paste0("optimal_k", tbl_name)]] <- renderUI({
-                res <- get_dep_result(tbl_name)
-                req(res)
-                key <- rv$current_dep_heatmap_key[[tbl_name]]
-                if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-
-                if (is.null(rv$optimal_k_individual[[tbl_name]])) {
-                    rv$optimal_k_individual[[tbl_name]] <- res$optimal_k
-                }
-                htmltools::tagList(
-                    shiny::tags$ul(
-                    shiny::tags$li(paste("The optimal k for this table following the elbow rule is:", res$optimal_k))
-                    )
-                )
-            }) # End of lapply for each table
-        })
-        }) # End of moduleServer
+    observe({
+        res <- try(heatmap_task$result(), silent = TRUE)
+        if (inherits(res, "try-error")) {
+            showNotification(paste("DEP heatmap error:", conditionMessage(attr(res, "condition"))),
+                            type = "error")
         }
-    )
+    })
+
+    observeEvent(input$recompute_heatmap, {
+      req(rv$dep_output[[tbl_name]], rv$ht_matrix[[tbl_name]])
+      heatmap_ready(TRUE)
+
+      clustering_enabled <- isolate(input$clustering)
+      num_clusters       <- isolate(input$num_clusters)
+      dep_output         <- isolate(rv$dep_output[[tbl_name]])
+      ht_matrix          <- isolate(rv$ht_matrix[[tbl_name]])
+      #stored_k           <- isolate(rv$optimal_k_individual[[tbl_name]])
+      columns_key        <- paste(isolate(rv$time_cols[[tbl_name]]), collapse = "_")
+
+      key <- if (isTRUE(clustering_enabled)) {
+        paste(tbl_name, columns_key, paste0("clusters:", num_clusters), "dep_heatmap", sep = "_")
+      } else {
+        paste(tbl_name, columns_key, "dep_heatmap", sep = "_")
+      }
+      rv$current_dep_heatmap_key[[tbl_name]] <- key
+
+      if (!cache$exists(key)) {
+        heatmap_task$invoke(list(dep_output=dep_output, ht_matrix=ht_matrix))  #, stored_k=stored_k))
+      }
+    }, ignoreInit = TRUE)
+
+    get_dep_result <- function() {
+      key <- rv$current_dep_heatmap_key[[tbl_name]]
+      if (!is.null(key) && cache$exists(key)) return(cache$get(key))
+      heatmap_task$result()
+    }
+
+    output$ht_slot <- renderUI({
+      if (!heatmap_ready()) {
+        return(div(style="padding:10px; color:#777;", "Choose settings and click “Recompute heatmap”."))
+      }
+      shinycssloaders::withSpinner(
+        plotOutput(session$ns("ht"), height = "520px"),
+        type = 8, color = "#2b8cbe", caption = "Loading..."
+      )
+    })
+
+    output$ht <- renderPlot({
+      req(rv$dep_output[[tbl_name]])
+      clustering_enabled <- input$clustering
+      num_clusters       <- input$num_clusters
+      p_cut   <- input$heatmap_pcutoff
+      lfc_cut <- input$heatmap_fccutoff
+
+      res <- get_dep_result(); req(res)
+      key <- rv$current_dep_heatmap_key[[tbl_name]]
+      if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+
+      if(is.na(res$optimal_k)){showNotification("The chosen cutoffs leave too few rows in the matrix for sensible optimal k calculation, please consider relaxing your cutoffs")}
+
+      dep_output <- rv$dep_output[[tbl_name]]
+      rd <- SummarizedExperiment::rowData(dep_output)
+      rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
+      SummarizedExperiment::rowData(dep_output) <- rd
+
+      dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
+
+      if (isTRUE(clustering_enabled)) {
+        DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
+      } else {
+        DEP2::plot_heatmap(dep_output_filtered)
+      }    
+    })
+
+    output$ht_sig <- DT::renderDT({
+      res <- get_dep_result(); req(res)
+      key <- rv$current_dep_heatmap_key[[tbl_name]]
+      if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+
+      dep_output   <- rv$dep_output[[tbl_name]]
+      p_cut <- input$heatmap_pcutoff; lfc_cut <- input$heatmap_fccutoff
+
+      rd <- SummarizedExperiment::rowData(dep_output)
+      rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
+      SummarizedExperiment::rowData(dep_output) <- rd    
+
+      #row_order_list <- ComplexHeatmap::row_order(ht)
+      gene_names <- SummarizedExperiment::rowData(dep_output)$Gene_Name
+
+      cluster_assignments <- rep(NA, length(gene_names))    
+      for (cl in seq_along(row_order_list)) {
+        cluster_assignments[row_order_list[[cl]]] <- cl
+      }
+      res$df$Clusters <- cluster_assignments
+      df_filtered <- res$df[res$df$Gene_Name %in% gene_names, , drop = FALSE]
+
+      DT::datatable(df_filtered, extensions="Buttons",
+                    options=list(scrollX=TRUE, pageLength=10,
+                                 dom="Bfrtip", buttons=c('copy','csv','excel','pdf','print')))
+    })
+
+    output$optimal_k <- renderUI({
+      res <- get_dep_result(); req(res)
+      key <- rv$current_dep_heatmap_key[[tbl_name]]
+      if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+
+      if (is.null(rv$optimal_k_individual[[tbl_name]])) {
+        rv$optimal_k_individual[[tbl_name]] <- res$optimal_k
+      }
+      tags$ul(tags$li(paste("The optimal k for this table (elbow rule):", res$optimal_k)))
+    })
+  })
+}
+
