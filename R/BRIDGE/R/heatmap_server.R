@@ -174,10 +174,11 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
 
       if (isTRUE(clustering_enabled)) {
-        DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
+        ht <- DEP2::plot_heatmap(dep_output_filtered, kmeans = TRUE, k = num_clusters)
       } else {
-        DEP2::plot_heatmap(dep_output_filtered)
+        ht <- DEP2::plot_heatmap(dep_output_filtered)
       }
+      ComplexHeatmap::draw(ht)
     })
 
     output$ht_sig <- DT::renderDT({
@@ -192,7 +193,15 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
       SummarizedExperiment::rowData(dep_output) <- rd
 
+      row_order_list <- ComplexHeatmap::row_order(ht)
       gene_names <- SummarizedExperiment::rowData(dep_output)$Gene_Name
+
+      cluster_assignments <- rep(NA, length(gene_names))    
+      for (cl in seq_along(row_order_list)) {
+        cluster_assignments[row_order_list[[cl]]] <- cl
+      }
+      res$df$Clusters <- cluster_assignments
+
       df_filtered <- res$df[res$df$Gene_Name %in% gene_names, ]
 
       DT::datatable(df_filtered, extensions="Buttons",
