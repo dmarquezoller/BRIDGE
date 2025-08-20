@@ -181,9 +181,21 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       if(is.na(res$optimal_k)){showNotification("The chosen cutoffs leave too few rows in the matrix for sensible optimal k calculation, please consider relaxing your cutoffs")}
 
       dep_output <- rv$dep_output[[tbl_name]]
-      rd <- SummarizedExperiment::rowData(dep_output)
-      rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
-      SummarizedExperiment::rowData(dep_output) <- rd
+
+
+      if (methods::is(dep_output, "DEGdata")) {
+        # RNA-seq case: clean significant columns from test_result
+        tr <- dep_output@test_result
+        tr <- tr[, !grepl("_significant$|^significant$", colnames(tr))]
+        dep_output@test_result <- tr 
+      } else {
+        # Proteomics case: clean rowData
+        rd <- SummarizedExperiment::rowData(dep_output)
+        rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
+        SummarizedExperiment::rowData(dep_output) <- rd
+      }
+
+
 
       dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
 
@@ -194,16 +206,28 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         ht <- DEP2::plot_heatmap(dep_output_filtered)
       }  
       row_order_list <- ComplexHeatmap::row_order(ht)
-      sig_se <- DEP2::get_signicant(dep_output_filtered)
-      rdat <- as.data.frame(SummarizedExperiment::rowData(sig_se))
-      heatmap_ids <- rdat$Gene_Name
+
+      if (methods::is(dep_output, "DEGdata")) {
+        sig_se <- DEP2::get_signicant(dep_output_filtered)
+        rdat <- as.data.frame(sig_se@test_result)
+        rdat$Gene_ID <- rownames(sig_se@test_result)
+        # Map to Gene_Name using rv$table
+        gene_map <- rv$tables[[tbl_name]][, c("Gene_ID", "Gene_Name")]
+        rdat <- dplyr::left_join(rdat, gene_map, by = "Gene_ID")
+
+        # Use Gene_Name for heatmap IDs
+        heatmap_ids <- rdat$Gene_Name
+      } else {
+        sig_se <- DEP2::get_signicant(dep_output_filtered)
+        rdat <- as.data.frame(SummarizedExperiment::rowData(sig_se))
+        heatmap_ids <- rdat$Gene_Name
+      }
 
       # Map each row to a cluster
       cluster_of_index <- rep(NA_integer_, length(heatmap_ids))
       for (cl in seq_along(row_order_list)) {
         cluster_of_index[row_order_list[[cl]]] <- cl
       }
-
       # Build mapper: gene name <-> cluster
       gene_cluster_mapper <- data.frame(
       Gene_Name = heatmap_ids,
@@ -265,16 +289,46 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       dep_output   <- rv$dep_output[[tbl_name]]
       p_cut <- input$heatmap_pcutoff; lfc_cut <- input$heatmap_fccutoff
 
-      rd <- SummarizedExperiment::rowData(dep_output)
-      rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
-      SummarizedExperiment::rowData(dep_output) <- rd    
+      if (methods::is(dep_output, "DEGdata")) {
+        # RNA-seq case: clean significant columns from test_result
+        tr <- dep_output@test_result
+        tr <- tr[, !grepl("_significant$|^significant$", colnames(tr))]
+        dep_output@test_result <- tr 
+      } else {
+        # Proteomics case: clean rowData
+        rd <- SummarizedExperiment::rowData(dep_output)
+        rd <- rd[, !grepl("_significant$|^significant$", colnames(rd))]
+        SummarizedExperiment::rowData(dep_output) <- rd
+      }    
 
       dep_output_filtered <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
 
-      rd <- SummarizedExperiment::rowData(dep_output_filtered)
-      sig_genes <- rd$Gene_Name[rd$significant]  # only TRUE
 
-      df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE]
+      if (methods::is(dep_output, "DEGdata")) {
+        rdat <- as.data.frame(dep_output_filtered@test_result)
+        rdat$Gene_ID <- rownames(dep_output_filtered@test_result)
+        
+        # Map to Gene_Name using your raw table
+        gene_map <- rv$tables[[tbl_name]][, c("Gene_ID", "Gene_Name")]
+        rdat <- dplyr::left_join(rdat, gene_map, by = "Gene_ID")
+        
+        # Keep only significant genes
+        sig_genes <- rdat$Gene_Name[rdat$significant]
+      } else {
+        rd <- SummarizedExperiment::rowData(dep_output_filtered)
+        sig_genes <- rd$Gene_Name[rd$significant]  # only TRUE
+      }
+
+      if (methods::is(dep_output, "DEGdata")) {
+        df <- res$df
+        df$Gene_ID <- rownames(df)
+        gene_map <- rv$tables[[tbl_name]][, c("Gene_ID", "Gene_Name")]
+        df <- dplyr::left_join(df, gene_map, by = "Gene_ID")
+        df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]
+      } else {
+        df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE]
+      }
+      print(str(df_filtered))
 
       if (isTRUE(clustering_enabled)){
       df_filtered <- df_filtered %>%
