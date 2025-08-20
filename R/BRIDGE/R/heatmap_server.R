@@ -120,19 +120,15 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         row_ok <- rowSums(is.finite(mat)) >= 2 & apply(mat, 1, function(x) stats::sd(x, na.rm=TRUE) > 0)
         col_ok <- colSums(is.finite(mat)) >= 2 & apply(mat, 2, function(x) stats::sd(x, na.rm=TRUE) > 0)
         mat <- mat[row_ok, col_ok, drop = FALSE]
-
+        mat_scaled <- safe_row_scale(mat)
+        
         # avoid device warnings on workers
         tmp <- tempfile(fileext = ".pdf"); pdf(tmp); on.exit({ dev.off(); unlink(tmp) }, add = TRUE)
-
-        if (nrow(mat) >= 2 && ncol(mat) >= 2) {
-          elbow <- NbClust::NbClust(mat, distance="euclidean", min.nc=2, max.nc=10,
-                                    method="kmeans", index="ch")
-          best <- elbow$Best.nc
-          optimal_k <- if (is.matrix(best)) {
-            kv <- as.integer(best[1, ]); as.integer(names(which.max(table(kv))))
-          } else as.integer(best[1])
-        } else {
-          optimal_k <- NA_integer_
+        
+        optimal_k <- safe_nbclust(mat_scaled, k_min = 2, k_max = 10)
+        if (is.na(optimal_k)) {
+            showNotification("Not enough clean data to estimate k (after filtering).", type = "warning")
+        return(invisible())
         }
 
         # table snapshot based on same filtered/significant set

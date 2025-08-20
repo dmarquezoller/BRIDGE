@@ -3,42 +3,61 @@ VolcanoServer <- function(id, rv, tbl_name) {
   moduleServer(id, function(input, output, session) {
 
     volcano_ready <- reactiveVal(FALSE)
+    last_params   <- reactiveVal(NULL)   # <- only changes on button click
 
     volcano_task <- ExtendedTask$new(function(deps) {
       promises::future_promise({
         dep_output <- deps$dep_output
         contrast   <- deps$contrast
         datatype   <- deps$datatype
-        pcut       <- deps$pcut
+        pcut       <- deps$pcut      # raw 0..1
         fccut      <- deps$fccut
         highlight  <- deps$highlight
 
         lfc_col  <- paste0(contrast, "_diff")
         pval_col <- paste0(contrast, "_p.adj")
-        res      <- SummarizedExperiment::rowData(dep_output)
+        rd       <- SummarizedExperiment::rowData(dep_output)
 
-        if (datatype == "proteomics") {
-          df <- data.frame(gene_names = stringr::str_to_title(res$Gene_Name),
-                           pval = res[[pval_col]], log2FC = res[[lfc_col]],
-                           stringsAsFactors = FALSE)
-          sig_se   <- DEP2::get_signicant(dep_output, contrast)
-          df_table <- DEP2::get_results(sig_se)
-        } else if (datatype == "phosphoproteomics") {
-          df <- data.frame(peptide = res$pepG,
-                           pval = res[[pval_col]], log2FC = res[[lfc_col]],
-                           stringsAsFactors = FALSE)
-          sig_se   <- DEP2::get_signicant(dep_output, contrast)
-          df_table <- DEP2::get_results(sig_se)
-        } else { # rnaseq
-          df <- data.frame(gene_ID = rownames(res),
-                           pval = res[[pval_col]], log2FC = res[[lfc_col]],
-                           stringsAsFactors = FALSE)
-          df_table <- DEP2::get_results(DEP2::get_signicant(dep_output, contrast))
+        # 1) compact DF once, with names normalized up-front
+        name <- switch(datatype,
+          proteomics        = stringr::str_to_title(rd$Gene_Name),
+          phosphoproteomics = rd$pepG,
+          rnaseq            = rownames(rd)
+        )
+        df <- data.frame(
+          name   = name,
+          log2FC = as.numeric(rd[[lfc_col]]),
+          pval   = as.numeric(rd[[pval_col]]),
+          stringsAsFactors = FALSE
+        )
+        # pre-compute helpers
+        df$neglog10p <- -log10(df$pval)
+        is_sig <- is.finite(df$log2FC) & is.finite(df$neglog10p) &
+                  df$pval <= pcut & abs(df$log2FC) >= fccut
+        df$dir <- ifelse(is_sig & df$log2FC > 0, "up",
+                  ifelse(is_sig & df$log2FC < 0, "down", "ns"))
+
+        # 2) significant table (same contrast)
+        sig_se   <- DEP2::get_signicant(dep_output, contrast)
+        df_table <- DEP2::get_results(sig_se)
+
+        # normalize highlight to df$name space
+        if (length(highlight)) {
+          if (identical(datatype, "proteomics")) highlight <- stringr::str_to_title(highlight)
+          highlight <- intersect(unique(highlight), df$name)
+        }
+
+        # 3) optional thinning of massive non-significant cloud (keeps all sig)
+        if (nrow(df) > 50000) {
+          keep <- which(df$dir != "ns")
+          ns   <- which(df$dir == "ns")
+          ns_keep <- ns[seq(1, length(ns), by = 3L)]  # keep ~33% ns points
+          df <- df[c(keep, ns_keep), , drop = FALSE]
         }
 
         list(df=df, table=df_table, pcut=pcut, fccut=fccut,
              datatype=datatype, highlight=highlight)
-      })
+      }, seed = TRUE)
     })
 
     # Populate highlight choices for THIS module's namespace
@@ -52,20 +71,21 @@ VolcanoServer <- function(id, rv, tbl_name) {
       updateSelectizeInput(session, "volcano_search", choices = choices, server = TRUE)
     })
 
-    
+    # CLICK to compute & freeze params (only-on-click rendering)
     observeEvent(input$compute_volcano, {
       req(rv$dep_output[[tbl_name]])
       volcano_ready(TRUE)
 
-      deps <- list(
+      params <- list(
         contrast   = isolate(input$comparison_volcano),
-        pcut       = isolate(input$volcano_pcutoff),
+        pcut       = isolate(input$volcano_pcutoff),   # raw FDR (0..1)
         fccut      = isolate(input$volcano_fccutoff),
-        highlight  = isolate(input$volcano_search) |> stringr::str_trim() |> stringr::str_to_title(),
+        highlight  = isolate(input$volcano_search) |> stringr::str_trim(),
         dep_output = isolate(rv$dep_output[[tbl_name]]),
         datatype   = isolate(rv$datatype[[tbl_name]])
       )
-      volcano_task$invoke(deps)
+      last_params(params)
+      volcano_task$invoke(params)
     }, ignoreInit = TRUE)
 
     output$volcano_slot <- renderUI({
@@ -79,33 +99,34 @@ VolcanoServer <- function(id, rv, tbl_name) {
     })
 
     output$volcano <- plotly::renderPlotly({
+      req(last_params())                # <- only rerender after the button
       res <- volcano_task$result(); req(res)
-      if (res$datatype == "proteomics") {
-        text_col <- res$df$gene_names; lab_map <- ggplot2::aes(text = gene_names)
-        p <- EnhancedVolcano::EnhancedVolcano(
-          res$df, lab=res$df$gene_names, selectLab="a", x="log2FC", y="pval",
-          title="", pCutoff=res$pcut, FCcutoff=res$fccut,
-          pointSize = ifelse(text_col %in% res$highlight, 3, 1),
-          legendPosition="none"
-        ) + lab_map + ggplot2::labs(color="Legend")
-      } else if (res$datatype == "phosphoproteomics") {
-        text_col <- res$df$peptide; lab_map <- ggplot2::aes(text = peptide)
-        p <- EnhancedVolcano::EnhancedVolcano(
-          res$df, lab=res$df$peptide, selectLab="a", x="log2FC", y="pval",
-          title="", pCutoff=res$pcut, FCcutoff=res$fccut,
-          pointSize = ifelse(text_col %in% res$highlight, 3, 1),
-          legendPosition="none"
-        ) + lab_map + ggplot2::labs(color="Legend")
-      } else {
-        text_col <- res$df$gene_ID; lab_map <- ggplot2::aes(text = gene_ID)
-        p <- EnhancedVolcano::EnhancedVolcano(
-          res$df, lab=res$df$gene_ID, selectLab="a", x="log2FC", y="pval",
-          title="", pCutoff=res$pcut, FCcutoff=res$fccut,
-          pointSize = ifelse(text_col %in% res$highlight, 3, 1),
-          legendPosition="none"
-        ) + lab_map + ggplot2::labs(color="Legend")
-      }
-      plotly::ggplotly(p + ggplot2::aes(x = log2FC, y = -log10(pval)), tooltip = "text")
+      df  <- res$df
+
+      # Only label highlights; everything else unlabeled
+      lab_vec <- if (length(res$highlight)) ifelse(df$name %in% res$highlight, df$name, "") else ""
+
+      # Lighter EnhancedVolcano: no connectors, no extra legends
+      p <- EnhancedVolcano::EnhancedVolcano(
+        df,
+        lab         = lab_vec,
+        x           = "log2FC",
+        y           = "pval",
+        title       = NULL,
+        subtitle    = NULL,
+        caption     = NULL,
+        pCutoff     = res$pcut,
+        FCcutoff    = res$fccut,
+        drawConnectors = FALSE,
+        pointSize   = 1.8,     # scalar (faster); highlights will still have labels
+        labSize     = 3,
+        legendPosition = "none"
+      ) + ggplot2::aes(text = name)
+
+      plt <- plotly::ggplotly(p, tooltip = "text", dynamicTicks = FALSE)
+      plt <- plotly::toWebGL(plt)          # use WebGL renderer under the hood
+      plt <- plotly::partial_bundle(plt)   # ship a lighter JS bundle
+      plt
     })
 
     output$volcano_sig_table <- DT::renderDT({

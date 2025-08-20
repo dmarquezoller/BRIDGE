@@ -32,7 +32,7 @@ int_heatmap_server <- function(input, output, session, rv) {
 
     first_tbl <- all_tables[[1]]
 
-    mat_scaled <- t(scale(t(first_tbl)))  # Scale across rows
+    mat_scaled <- safe_row_scale(first_tbl) # Scale across rows
 
     good_rows <- apply(mat_scaled, 1, function(x) all(!is.na(x) & !is.nan(x)))
     mat_scaled <- mat_scaled[good_rows, ]
