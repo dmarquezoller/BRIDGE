@@ -215,6 +215,19 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
       rv$gene_cluster[[tbl_name]] <- gene_cluster_mapper
 
 
+      # ---- Compute Z-scores ----
+      mat <- SummarizedExperiment::assay(sig_se)  # rows = significant genes
+      mat_z <- t(scale(t(mat)))                   # Z-score across columns
+      mat_z_df <- data.frame(
+          Gene_Name = heatmap_ids,
+          mat_z,
+          stringsAsFactors = FALSE
+      )
+
+      # Store Z-scores in rv
+      rv$z_scores[[tbl_name]] <- mat_z_df
+
+
       #Creation of annotation
       mat_ordered <- as.matrix(SummarizedExperiment::assay(sig_se))  # rows = significant genes
       cluster_vec <- gene_cluster_mapper$Cluster
@@ -256,7 +269,9 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
     output$ht_sig <- DT::renderDT({
       req(rv$gene_cluster[[tbl_name]])
+      req(rv$z_scores[[tbl_name]])
       cluster_mapper <- isolate(rv$gene_cluster[[tbl_name]])
+      z_scores <- isolate(rv$z_scores[[tbl_name]])
       clustering_enabled <- input$clustering
       res <- get_dep_result(); req(res)
       key <- rv$current_dep_heatmap_key[[tbl_name]]
@@ -281,6 +296,9 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         dplyr::left_join(cluster_mapper, by = "Gene_Name") %>%
         dplyr::select(Gene_Name, Cluster, dplyr::everything())
       }
+
+      df_filtered <- df_filtered %>%
+        dplyr::left_join(z_scores, by = "Gene_Name")
 
       DT::datatable(df_filtered, extensions="Buttons",
                     options=list(scrollX=TRUE, pageLength=10,
