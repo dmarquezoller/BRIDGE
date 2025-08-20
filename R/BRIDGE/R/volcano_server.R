@@ -10,7 +10,7 @@ VolcanoServer <- function(id, rv, tbl_name) {
         dep_output <- deps$dep_output
         contrast   <- deps$contrast
         datatype   <- deps$datatype
-        pcut       <- deps$pcut      # raw 0..1
+        pcut_in    <- deps$pcut
         fccut      <- deps$fccut
         highlight  <- deps$highlight
 
@@ -18,56 +18,76 @@ VolcanoServer <- function(id, rv, tbl_name) {
         pval_col <- paste0(contrast, "_p.adj")
         rd       <- SummarizedExperiment::rowData(dep_output)
 
-        # 1) compact DF once, with names normalized up-front
+        # names in the SAME space as the plot
         name <- switch(datatype,
-          proteomics        = stringr::str_to_title(rd$Gene_Name),
-          phosphoproteomics = rd$pepG,
-          rnaseq            = rownames(rd)
+        proteomics        = stringr::str_to_title(rd$Gene_Name),
+        phosphoproteomics = rd$pepG,
+        rnaseq            = rownames(rd)
         )
+
         df <- data.frame(
-          name   = name,
-          log2FC = as.numeric(rd[[lfc_col]]),
-          pval   = as.numeric(rd[[pval_col]]),
-          stringsAsFactors = FALSE
+        name   = as.character(name),
+        log2FC = as.numeric(rd[[lfc_col]]),
+        pval   = as.numeric(rd[[pval_col]]),
+        stringsAsFactors = FALSE
         )
+
+        # --- 1) pcut guard: accept raw (0..1) OR -log10 values (>1) ---
+        pcut <- if (is.finite(pcut_in) && pcut_in > 1) 10^(-pcut_in) else pcut_in
+        pcut <- min(max(pcut, 0), 1)  # clamp to [0,1]
+
+        # --- 2) normalize highlight into df$name space ---
+        if (length(highlight)) {
+        if (identical(datatype, "proteomics")) highlight <- stringr::str_to_title(highlight)
+        # if user typed with different case, match case-insensitively:
+        if (!all(highlight %in% df$name)) {
+            map <- match(tolower(highlight), tolower(df$name))
+            highlight <- unique(na.omit(df$name[map]))
+        } else {
+            highlight <- unique(highlight)
+        }
+        } else {
+        highlight <- character(0)
+        }
+
         # pre-compute helpers
         df$neglog10p <- -log10(df$pval)
         is_sig <- is.finite(df$log2FC) & is.finite(df$neglog10p) &
-                  df$pval <= pcut & abs(df$log2FC) >= fccut
+                df$pval <= pcut & abs(df$log2FC) >= fccut
         df$dir <- ifelse(is_sig & df$log2FC > 0, "up",
-                  ifelse(is_sig & df$log2FC < 0, "down", "ns"))
+                ifelse(is_sig & df$log2FC < 0, "down", "ns"))
 
-        # 2) significant table (same contrast)
+        # 3) thinning: KEEP all sig + ALL highlighted, then thin remaining ns
+        if (nrow(df) > 50000) {
+        keep_always <- (df$dir != "ns") | (df$name %in% highlight)
+        ns_idx <- which(!keep_always)  # only truly droppable ns
+        if (length(ns_idx)) {
+            ns_keep <- ns_idx[seq(1, length(ns_idx), by = 3L)]
+            keep <- keep_always
+            keep[ns_keep] <- TRUE
+            df <- df[keep, , drop = FALSE]
+        }
+        }
+
+        # sig table
         sig_se   <- DEP2::get_signicant(dep_output, contrast)
         df_table <- DEP2::get_results(sig_se)
 
-        # normalize highlight to df$name space
-        if (length(highlight)) {
-          if (identical(datatype, "proteomics")) highlight <- stringr::str_to_title(highlight)
-          highlight <- intersect(unique(highlight), df$name)
-        }
-
-        # 3) optional thinning of massive non-significant cloud (keeps all sig)
-        if (nrow(df) > 50000) {
-          keep <- which(df$dir != "ns")
-          ns   <- which(df$dir == "ns")
-          ns_keep <- ns[seq(1, length(ns), by = 3L)]  # keep ~33% ns points
-          df <- df[c(keep, ns_keep), , drop = FALSE]
-        }
-
         list(df=df, table=df_table, pcut=pcut, fccut=fccut,
-             datatype=datatype, highlight=highlight)
+            datatype=datatype, highlight=highlight)
       }, seed = TRUE)
     })
 
     # Populate highlight choices for THIS module's namespace
     observe({
       req(rv$tables[[tbl_name]], rv$datatype[[tbl_name]])
-      choices <- if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
-        rv$tables[[tbl_name]]$pepG
-      } else {
-        rv$tables[[tbl_name]]$Gene_Name
-      }
+      choices <- switch(rv$datatype[[tbl_name]],
+        phosphoproteomics = rv$tables[[tbl_name]]$pepG,
+        rnaseq            = if (!is.null(rv$tables[[tbl_name]]$Gene_ID))
+                              rv$tables[[tbl_name]]$Gene_ID
+                            else rownames(rv$tables[[tbl_name]]),
+        rv$tables[[tbl_name]]$Gene_Name   # proteomics default
+      )
       updateSelectizeInput(session, "volcano_search", choices = choices, server = TRUE)
     })
 
@@ -99,33 +119,53 @@ VolcanoServer <- function(id, rv, tbl_name) {
     })
 
     output$volcano <- plotly::renderPlotly({
-      req(last_params())                # <- only rerender after the button
+      req(last_params())
       res <- volcano_task$result(); req(res)
-      df  <- res$df
 
-      # Only label highlights; everything else unlabeled
-      lab_vec <- if (length(res$highlight)) ifelse(df$name %in% res$highlight, df$name, "") else ""
+      df <- res$df
+      df <- df[is.finite(df$log2FC) & is.finite(df$pval), , drop = FALSE]
+      if (!nrow(df)) {
+        showNotification("No finite points to plot for this contrast.", type = "warning")
+        return(plotly::plot_ly())
+      }
 
-      # Lighter EnhancedVolcano: no connectors, no extra legends
+      # Use lab = df$name for all, and selectLab = highlights to force labels
       p <- EnhancedVolcano::EnhancedVolcano(
         df,
-        lab         = lab_vec,
-        x           = "log2FC",
-        y           = "pval",
-        title       = NULL,
-        subtitle    = NULL,
-        caption     = NULL,
-        pCutoff     = res$pcut,
-        FCcutoff    = res$fccut,
+        lab            = df$name,
+        selectLab      = res$highlight,   # <- key change for reliable labels
+        x              = "log2FC",
+        y              = "pval",
+        title          = NULL, subtitle = NULL, caption = NULL,
+        pCutoff        = res$pcut,
+        FCcutoff       = res$fccut,
         drawConnectors = FALSE,
-        pointSize   = 1.8,     # scalar (faster); highlights will still have labels
-        labSize     = 3,
+        pointSize      = 1.8,
+        labSize        = 3,
         legendPosition = "none"
       ) + ggplot2::aes(text = name)
 
-      plt <- plotly::ggplotly(p, tooltip = "text", dynamicTicks = FALSE)
-      plt <- plotly::toWebGL(plt)          # use WebGL renderer under the hood
-      plt <- plotly::partial_bundle(plt)   # ship a lighter JS bundle
+      plt <- tryCatch({
+        plotly::ggplotly(p, tooltip = "text", dynamicTicks = FALSE) |>
+          plotly::toWebGL() |>
+          plotly::partial_bundle()
+      }, error = function(e) {
+        showNotification(
+          paste("Interactive rendering failed; falling back to basic scatter:", e$message),
+          type = "error"
+        )
+        NULL
+      })
+      if (is.null(plt)) {
+        return(
+          plotly::plot_ly(
+            x = df$log2FC, y = -log10(df$pval),
+            type = "scatter", mode = "markers",
+            text = df$name,
+            hovertemplate = "<b>%{text}</b><br>log2FC=%{x:.2f}<br>-log10(p)=%{y:.2f}<extra></extra>"
+          )
+        )
+      }
       plt
     })
 
