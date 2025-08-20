@@ -30,8 +30,8 @@ plot_custom_tc_cluster <- function(ht_mat, exp_design, cluster_vec,
   # Dummy membership values for coloring
   k <- length(unique(cluster_vec))
   set.seed(1234)
-  mebership <- runif(nrow(ht_mat), 0.1, 0.9)
-  names(mebership) <- rownames(ht_mat)
+  membership <- runif(nrow(ht_mat), 0.1, 0.9)
+  names(membership) <- rownames(ht_mat)
   
   # Color scales
   col_fun_line <- circlize::colorRamp2(c(0.01, 0.5, 0.9), c("#54c556", "#d3ca48", "#cd3634"))
@@ -57,7 +57,7 @@ plot_custom_tc_cluster <- function(ht_mat, exp_design, cluster_vec,
       y = as.vector(t((ht_mat2[index, , drop = FALSE] / 4) + 0.5)),
       x = rep(seq(from = 2 / (2 * ngroup + 2), to = (2 * ngroup) / (2 * ngroup + 1), length.out = ngroup), length(index)),
       id = rep(1:length(index), each = ngroup),
-      gp =ggfun::gpar(col = col_fun_line(mebership[index]), lwd = 1, alpha = 0.5)
+      gp =ggfun::gpar(col = col_fun_line(membership[index]), lwd = 1, alpha = 0.5)
     )
     
     if (cluster_vec[index[1]] == levels(cluster_vec)[k]) {

@@ -28,23 +28,44 @@ int_heatmap_server <- function(input, output, session, rv) {
    shiny::req(rv$intersected_tables_processed, input$heatmap_k)
 
     all_tables <- rv$intersected_tables_processed
-    k <- input$heatmap_k
-
+    
     first_tbl <- all_tables[[1]]
-
     mat_scaled <- safe_row_scale(first_tbl) # Scale across rows
+    # allow some NAs; require ≥2 finite values and non-zero SD
+    row_ok <- rowSums(is.finite(mat_scaled)) >= 2 &
+          apply(mat_scaled, 1, function(x) stats::sd(x, na.rm = TRUE) > 0)
 
-    good_rows <- apply(mat_scaled, 1, function(x) all(!is.na(x) & !is.nan(x)))
-    mat_scaled <- mat_scaled[good_rows, ]
-
-    # Perform k-means clustering on scaled data
-    if (nrow(mat_scaled) < k) {
-     shiny::showNotification(paste("Cannot create", k, 
-                            "clusters from", nrow(mat_scaled), "genes."),
-                      type = "error")
-      return(NULL)
+    mat_scaled <- mat_scaled[row_ok, , drop = FALSE]
+    if (nrow(mat_scaled) < 2 || ncol(mat_scaled) < 2) {
+        shiny::showNotification("Too few usable rows/columns after cleaning.", type = "warning")
+        return(NULL)
     }
-    km <- kmeans(mat_scaled, centers = k)
+
+    k <- as.integer(input$heatmap_k)
+    if (!is.finite(k) || k < 2) k <- 2
+
+    # maximum valid k is nrow(mat) - 1
+    k_max <- max(2L, nrow(mat_scaled) - 1L)
+    if (k > k_max) {
+        shiny::showNotification(
+            sprintf("Reducing k from %d to %d (only %d rows after filtering).", k, k_max, nrow(mat_scaled)),
+            type = "warning"
+        )
+        k <- k_max
+    }
+
+    # still not enough rows?
+    if (k_max < 2L) {
+        shiny::showNotification("Not enough rows for clustering (need ≥ 2).", type = "error")
+        return(NULL)
+    }
+
+    # safe kmeans
+    km <- try(stats::kmeans(mat_scaled, centers = k, nstart = 10, iter.max = 100), silent = TRUE)
+    if (inherits(km, "try-error")) {
+        shiny::showNotification("k-means failed on cleaned matrix; try smaller k or relax filters.", type = "error")
+        return(NULL)
+    }
 
     # Get cluster labels and order of genes
     cluster_labels <- km$cluster
@@ -64,7 +85,7 @@ int_heatmap_server <- function(input, output, session, rv) {
         local({
         tbl_name <- tbl
         mat <- all_tables[[tbl_name]]
-        mat_scaled_tbl <- t(scale(t(mat)))
+        mat_scaled_tbl <- safe_row_scale(mat)
 
         gene_names <- sapply(strsplit(rownames(mat_scaled_tbl), "_"), `[`, 1)
         cluster_vec <- factor(rv$gene_to_cluster[gene_names], levels = 1:k)
@@ -79,7 +100,7 @@ int_heatmap_server <- function(input, output, session, rv) {
 
         output[[paste0("heatmap_", tbl_name)]] <- shiny::renderPlot({
           mat <- all_tables[[tbl_name]]
-          mat_scaled_tbl <- t(scale(t(mat)))
+          mat_scaled_tbl <- safe_row_scale(mat)
 
           # Build cluster average profiles
           cluster_ids <- split(seq_len(nrow(mat_ordered)), cluster_vec)

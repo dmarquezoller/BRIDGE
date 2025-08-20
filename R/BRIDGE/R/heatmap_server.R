@@ -198,7 +198,15 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
       dep_flt <- get_depflt(params)
       if (params$clustering) {
-        DEP2::plot_heatmap(dep_flt, kmeans = TRUE, k = params$k)
+        k <- as.integer(params$k)
+        k_max <- max(2L, nrow(dep_flt) - 1L)
+        if (!is.finite(k) || k < 2L) k <- 2L
+        if (k > k_max) {
+            showNotification(sprintf("Reducing k from %d to %d (only %d rows).",
+                                    input$num_clusters, k_max, nrow(dep_flt)), type = "warning")
+            k <- k_max
+        }
+        DEP2::plot_heatmap(dep_flt, kmeans = TRUE, k = k)
       } else {
         DEP2::plot_heatmap(dep_flt)
       }
