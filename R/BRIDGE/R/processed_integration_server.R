@@ -1,7 +1,7 @@
 #' @export
-processed_integration <- function(input, output, session, rv){
+processed_integration <- function(input, output, session, rv) {
     shiny::observeEvent(input$process_integrate_data, {
-       shiny::req(input$processed_integration)
+        shiny::req(input$processed_integration)
 
         selected_tables <- input$processed_integration
         filtered_genes <- list()
@@ -10,43 +10,42 @@ processed_integration <- function(input, output, session, rv){
         for (tbl in selected_tables) {
             contrast <- input[[paste0("pi_comparison_selected_", tbl)]]
             dep <- rv$dep_output[[tbl]]
-            
+
             # Construct column names for contrast
             lfc_col <- paste0(contrast, "_diff")
             padj_col <- paste0(contrast, "_p.adj")
-            
+
             # Extract the necessary columns from SummarizedExperiment::rowData
-            res <- as.data.frame( SummarizedExperiment::rowData(dep))
+            res <- as.data.frame(SummarizedExperiment::rowData(dep))
 
-            if (rv$datatype[[tbl]] == "rnaseq"){
-            mapper <- rv$tables[[tbl]]
-            mapper <- mapper[, c("Gene_ID", "Gene_Name")]
-            res$Gene_ID <- rownames(res)
-            res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
-
+            if (rv$datatype[[tbl]] == "rnaseq") {
+                mapper <- rv$tables[[tbl]]
+                mapper <- mapper[, c("Gene_ID", "Gene_Name")]
+                res$Gene_ID <- rownames(res)
+                res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
             }
 
             if (!all(c("Gene_Name", lfc_col, padj_col) %in% colnames(res))) {
-           shiny::showNotification(paste("Missing columns in table:", tbl), type = "error")
-            next
+                shiny::showNotification(paste("Missing columns in table:", tbl), type = "error")
+                next
             }
 
             df <- res[, c("Gene_Name", lfc_col, padj_col)]
 
-            colnames(df) <- c("Gene_Name", "diff", "p.adj")  # Standardize column names
+            colnames(df) <- c("Gene_Name", "diff", "p.adj") # Standardize column names
             df <- df[!is.na(df$Gene_Name), ]
             df <- df[!is.na(df$diff), ]
             df <- df[!is.na(df$p.adj), ]
             # Apply threshold filtering
             keep <- abs(df$diff) >= input$lfc_thresh_pi & df$p.adj <= input$pval_thresh_pi
             filtered_genes[[tbl]] <- df$Gene_Name[keep]
-        
+
             original_dim <- dim(SummarizedExperiment::assay(dep))
             filtered_dim <- length(filtered_genes[[tbl]])
 
             dim_info[[tbl]] <- list(
-            original = original_dim,
-            filtered = c(filtered_dim, original_dim[2])
+                original = original_dim,
+                filtered = c(filtered_dim, original_dim[2])
             )
         }
 
@@ -54,7 +53,7 @@ processed_integration <- function(input, output, session, rv){
         all_ids <- lapply(filtered_genes, unlist)
         common_ids <- Reduce(intersect, all_ids)
         if (length(common_ids) == 0) {
-           shiny::showNotification("No intersected significant genes found across selected datasets.", type = "error")
+            shiny::showNotification("No intersected significant genes found across selected datasets.", type = "error")
             rv$intersected_tables_processed <- NULL
             rv$integration_preview_dims <- NULL
             return()
@@ -69,9 +68,9 @@ processed_integration <- function(input, output, session, rv){
 
             # Generate unique IDs
             if ("pepG" %in% colnames(data)) {
-            data$unique_id <- paste(data$Gene_Name, data$pepG, sep = "_")
+                data$unique_id <- paste(data$Gene_Name, data$pepG, sep = "_")
             } else {
-            data$unique_id <- data$Gene_Name
+                data$unique_id <- data$Gene_Name
             }
 
             rownames(mat) <- data$unique_id
@@ -98,13 +97,13 @@ processed_integration <- function(input, output, session, rv){
             dep <- rv$dep_output[[tbl]]
             lfc_col <- paste0(contrast, "_diff")
 
-            res <- as.data.frame( SummarizedExperiment::rowData(dep))
+            res <- as.data.frame(SummarizedExperiment::rowData(dep))
 
-            if (rv$datatype[[tbl]] == "rnaseq"){
-            mapper <- rv$tables[[tbl]]
-            mapper <- mapper[, c("Gene_ID", "Gene_Name")]
-            res$Gene_ID <- rownames(res)
-            res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
+            if (rv$datatype[[tbl]] == "rnaseq") {
+                mapper <- rv$tables[[tbl]]
+                mapper <- mapper[, c("Gene_ID", "Gene_Name")]
+                res$Gene_ID <- rownames(res)
+                res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
             }
 
             df <- res[, c("Gene_Name", lfc_col)]
@@ -116,22 +115,22 @@ processed_integration <- function(input, output, session, rv){
         lfc_cols <- setdiff(colnames(scatter_data), "Gene_Name")
 
         plot_list <- list()
-        for (i in 1:(length(lfc_cols)-1)) {
-            for (j in (i+1):length(lfc_cols)) {
+        for (i in 1:(length(lfc_cols) - 1)) {
+            for (j in (i + 1):length(lfc_cols)) {
                 df_plot <- scatter_data %>%
-                select(Gene_Name, x = all_of(lfc_cols[i]), y = all_of(lfc_cols[j])) %>%
-                filter(!is.na(x) & !is.na(y))
-                
+                    select(Gene_Name, x = all_of(lfc_cols[i]), y = all_of(lfc_cols[j])) %>%
+                        filter(!is.na(x) & !is.na(y))
+
                 p <- ggplot(df_plot, aes(x = x, y = y, text = Gene_Name)) +
-                geom_point(alpha = 0.7, color = "#2b8cbe") +
-                geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
-                labs(
-                    title = paste(lfc_cols[i], "vs", lfc_cols[j]),
-                    x = lfc_cols[i],
-                    y = lfc_cols[j]
-                ) +
-                theme_minimal()
-                
+                    geom_point(alpha = 0.7, color = "#2b8cbe") +
+                        geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
+                        labs(
+                            title = paste(lfc_cols[i], "vs", lfc_cols[j]),
+                            x = lfc_cols[i],
+                            y = lfc_cols[j]
+                        ) +
+                        theme_minimal()
+
                 # Store plotly version
                 plot_list[[paste(lfc_cols[i], lfc_cols[j], sep = "_vs_")]] <- p
             }
@@ -143,15 +142,15 @@ processed_integration <- function(input, output, session, rv){
         rv$intersected_tables_processed <- intersected_list
         rv$integration_preview_dims <- lapply(selected_tables, function(tbl) {
             list(
-            original = dim(SummarizedExperiment::assay(rv$dep_output[[tbl]])),
-            filtered = dim_info[[tbl]]$filtered,
-            intersected = dim_info[[tbl]]$intersected
+                original = dim(SummarizedExperiment::assay(rv$dep_output[[tbl]])),
+                filtered = dim_info[[tbl]]$filtered,
+                intersected = dim_info[[tbl]]$intersected
             )
         })
         optimal_k <- safe_nbclust(data_for_elbow, k_min = 2, k_max = 10)
         if (is.na(optimal_k)) {
-          showNotification("Not enough clean data to estimate k (after filtering).", type = "warning")
-          return(invisible())
+            showNotification("Not enough clean data to estimate k (after filtering).", type = "warning")
+            return(invisible())
         }
         rv$optimal_k <- optimal_k
         names(rv$integration_preview_dims) <- selected_tables
