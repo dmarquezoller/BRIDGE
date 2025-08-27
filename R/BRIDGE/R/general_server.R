@@ -133,7 +133,7 @@ server_function <- function(input, output, session, db_path) {
     shiny::observeEvent(input$load_data, {
         showModal(modalDialog(
             title = "Loading",
-            "Please wait, loading the table...",
+            "Please wait, loading table from cache or running analysis ...",
             footer = NULL,
             easyClose = FALSE
         ))
@@ -174,7 +174,7 @@ server_function <- function(input, output, session, db_path) {
         }
 
         cache_key <- paste(table_id, paste(rv$time_cols[[table_id]], collapse = "_"), "dep", sep = "_")
-        print(paste("Running analysis for:", table_id, "datatype:", rv$datatype[[table_id]]))
+        message("Running analysis for:", table_id, " datatype:", rv$datatype[[table_id]])
 
         # Recompute heatmap if the button is clicked
 
@@ -335,7 +335,7 @@ server_function <- function(input, output, session, db_path) {
             # DEP / PCA depend on dep_output
             if (!(tbl %in% wired$dep) && has_dep(tbl)) {
                 DepHeatmapServer(paste0("DepHeatmap_", tbl), rv, cache, tbl)
-                VolcanoServer(paste0("Volcano_", tbl), rv, tbl)
+                VolcanoServer(paste0("Volcano_", tbl), rv, cache, tbl)
                 wired$dep <- union(wired$dep, tbl)
             }
             if (!(tbl %in% wired$pca) && has_dep(tbl)) {

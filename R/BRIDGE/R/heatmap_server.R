@@ -76,8 +76,7 @@ RawHeatmapServer <- function(id, rv, tbl_name) {
 DepHeatmapServer <- function(id, rv, cache, tbl_name) {
     moduleServer(id, function(input, output, session) {
         heatmap_ready <- reactiveVal(FALSE)
-        # in-memory cache of filtered object per (table, columns_key, p, lfc)
-        depflt_cache <- reactiveValues()
+        depflt_cache <- reactiveValues() # in-memory cache of filtered object per (table, columns_key, p, lfc)
 
         get_depflt <- function(params) {
             key <- paste(
@@ -187,7 +186,8 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 if (!cache$exists(key)) {
                     heatmap_task$invoke(list(
                         dep_output = params$dep_output,
-                        p_cut = params$p_cut, lfc_cut = params$lfc_cut
+                        p_cut = params$p_cut, 
+                        lfc_cut = params$lfc_cut
                     ))
                 }
             },

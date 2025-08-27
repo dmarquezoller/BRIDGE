@@ -10,6 +10,7 @@ suppressPackageStartupMessages({
     library(promises)
     library(tidyverse)
     library(shiny)
+    library(shinybusy)
     library(DEP2)
     library(NbClust)
     library(SummarizedExperiment)

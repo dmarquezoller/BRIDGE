@@ -13,7 +13,7 @@ dep2_proteomics <- function(df, tbl_name, rv) {
 
 #' @export
 dep2_phosphoproteomics <- function(df, tbl_name, rv) {
-    df <- df[!grepl("p0", df$pepG), ] # Remove the p0
+    # df <- df[!grepl("p0", df$pepG), ] # Remove the p0   NOT RECOMMENDED!
     unique_phos <- DEP2::make_unique(df, names = "pepG", ids = "Protein_ID", delim = ";")
     ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_phos))
     se_phos <- DEP2::make_se_parse(unique_phos, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
@@ -30,7 +30,7 @@ dep2_rnaseq <- function(df, tbl_name, rv) {
     unique_dds <- df
     ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_dds))
     data_mat <- as.matrix(unique_dds[, ecols])
-    rownames(data_mat) <- unique_dds$Gene_ID
+    rownames(data_mat) <- paste0(unique_dds$Gene_Name, "_", unique_dds$Gene_ID)
     dds <- DEP2::make_dds_parse(data_mat, mode = "delim", sep = "_")
     dds <- DEP2::filter_se(dds, fraction = 0.3, thr = 1)
     diff <- DEP2::test_diff_deg(dds, type = "all")
