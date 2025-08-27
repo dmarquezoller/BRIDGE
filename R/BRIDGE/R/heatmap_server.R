@@ -77,6 +77,8 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
     moduleServer(id, function(input, output, session) {
         heatmap_ready <- reactiveVal(FALSE)
         depflt_cache <- reactiveValues() # in-memory cache of filtered object per (table, columns_key, p, lfc)
+        last_params <- reactiveVal(NULL) # frozen on click
+        roworder <- reactiveVal(NULL)
 
         get_depflt <- function(params) {
             key <- paste(
@@ -106,7 +108,6 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             depflt_cache[[key]] <- dep_flt
             dep_flt
         }
-        last_params <- reactiveVal(NULL) # frozen on click
 
         # Background task: compute optimal_k from the filtered (significant) matrix + a DF snapshot
         heatmap_task <- ExtendedTask$new(function(args) {
@@ -207,7 +208,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             if (!heatmap_ready()) {
                 return(div(
                     style = "padding:10px; color:#777;",
-                    "Choose settings and click “Recompute heatmap”."
+                    "Choose settings and click “Compute heatmap”."
                 ))
             }
             shinycssloaders::withSpinner(
@@ -236,35 +237,77 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     ), type = "warning")
                     k <- k_max
                 }
-                DEP2::plot_heatmap(dep_flt, kmeans = TRUE, k = k)
+                ht <- DEP2::plot_heatmap(dep_flt, kmeans = TRUE, k = k, seed = 42)
+                roworder(ComplexHeatmap::row_order(ht))
+                ht
+                # tc <- get_tc_cluster(dep_flt, k = k, seed = 42, heatmap_width = 2.5, heatmap_height = 5)
+                # roword <- tc$res %>%
+                #    group_by(Timecourse_cluster) %>%
+                #    group_map(~ pull(.x, name)) %>%
+                #    set_names(unique(tc$res$Timecourse_cluster))
+                # roworder(roword)
+                # tc
             } else {
-                DEP2::plot_heatmap(dep_flt)
+                ht <- DEP2::plot_heatmap(dep_flt)
+                roworder(ComplexHeatmap::row_order(ht))
+                ht
             }
         })
 
         output$ht_sig <- DT::renderDT({
             params <- req(last_params())
+            roword <- req(roworder())
             res <- get_dep_result()
             req(res)
             key <- rv$current_dep_heatmap_key[[tbl_name]]
             if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
 
+            cluster.all <- list()
+            # loop to extract genes for each cluster.
+            for (i in 1:length(roword)) {
+                message("clusters: ", i, head(roword[[i]]))
+                if (i == 1) {
+                    clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
+                    cluster.all <- cbind(clu, paste("cluster", i, sep = ""))
+                } else {
+                    clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
+                    clu <- cbind(clu, paste("cluster", i, sep = ""))
+                    cluster.all <- rbind(cluster.all, clu)
+                }
+            }
+            colnames(cluster.all) <- c("Gene_ID", "Cluster")
+            cluster.all <- as.data.frame(cluster.all)
+
+            message("clusters: ", head(cluster.all))
+
             dep_flt <- get_depflt(params)
             if (methods::is(dep_flt, "DEGdata")) {
                 df <- res$df
-                df$Gene_ID <- rownames(df)
+                df$name <- rownames(df)
+                df$Gene_ID <- gsub("^(.*)_", "", rownames(df))
                 gene_map <- rv$tables[[tbl_name]][, c("Gene_ID", "Gene_Name")]
                 df <- dplyr::left_join(df, gene_map, by = "Gene_ID")
+                df <- dplyr::left_join(df, cluster.all, by = "Gene_ID")
 
                 sig <- as.data.frame(dep_flt@test_result)
-                sig$Gene_ID <- rownames(dep_flt@test_result)
+                sig$Gene_ID <- gsub("^(.*)_", "", rownames(dep_flt@test_result))
                 sig <- dplyr::left_join(sig, gene_map, by = "Gene_ID")
                 sig_genes <- sig$Gene_Name[sig$significant]
+
                 df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]
+                rownames(df_filtered) <- NULL
+                df_filtered <- df_filtered %>%
+                    select(Gene_ID, Gene_Name, Cluster, everything()) %>%
+                    mutate(Gene_Name = stringr::str_to_title(Gene_Name))
             } else {
                 rd <- SummarizedExperiment::rowData(dep_flt)
                 sig_genes <- rd$Gene_Name[rd$significant]
-                df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE]
+                df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE] %>% dplyr::select(-ID)
+                df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "Gene_ID")
+                rownames(df_filtered) <- NULL
+                df_filtered <- df_filtered %>%
+                    select(Gene_ID, Gene_Name, Cluster, everything()) %>%
+                    mutate(Gene_Name = stringr::str_to_title(Gene_Name))
             }
 
             DT::datatable(df_filtered,

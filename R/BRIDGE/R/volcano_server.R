@@ -72,14 +72,14 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                 # message("Columns: ", paste(colnames(rd), collapse = ", "))
                 df <- as.data.frame(SummarizedExperiment::rowData(dep_flt))
                 df_table <- df
-                message("DF_table: ", head(df_table, 3), "\ndpflt: ", str(SummarizedExperiment::colData(dep_flt)))
+                # message("DF_table: ", head(df_table, 3), "\ndpflt: ", str(SummarizedExperiment::colData(dep_flt)))
 
                 names <- switch(datatype,
                     proteomics        = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Gene_ID),
                     phosphoproteomics = paste0(df$Gene_Name, "_", df$pepG),
                     rnaseq            = rownames(df)
                 )
-                message("NAMING: ", head(names))
+                # message("NAMING: ", head(names))
 
                 df <- data.frame(
                     name = names,
@@ -88,7 +88,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                     stringsAsFactors = FALSE
                 )                
                 df <- stats::na.omit(df)
-                message("Volcano DF: ", colnames(df), " | ", paste(head(df$name), collapse = ", "))
+                # message("Volcano DF: ", colnames(df), " | ", paste(head(df$name), collapse = ", "))
 
                 list(
                     df = df, table = df_table, pcut = p_cut, fccut = lfc_cut,
@@ -271,19 +271,24 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                df <- dplyr::left_join(df, gene_map, by = "Gene_ID")
 
                sig <- as.data.frame(dep_flt@test_result)
-               sig$Gene_ID <- rownames(dep_flt@test_result)
+               sig$Gene_ID <- gsub("^(.*)_", "", rownames(dep_flt@test_result))
                sig <- dplyr::left_join(sig, gene_map, by = "Gene_ID")
                sig_genes <- sig$Gene_Name[sig$significant]
 
                df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]
                rownames(df_filtered) <- NULL
-               df_filtered <- df_filtered %>% select(Gene_Name, Gene_ID, name, everything())
+               df_filtered <- df_filtered %>%
+                   select(Gene_ID, Gene_Name, name, everything()) %>%
+                   mutate(Gene_Name = stringr::str_to_title(Gene_Name))
            } else {
                rd <- SummarizedExperiment::rowData(dep_flt)
                sig_genes <- rd$Gene_Name[rd$significant]
                df_filtered <- res$table[res$table$Gene_Name %in% sig_genes, , drop = FALSE] %>% dplyr::select(-ID)
                df_filtered$name <- rownames(df_filtered)
                rownames(df_filtered) <- NULL
+               df_filtered <- df_filtered %>%
+                   select(Gene_ID, Gene_Name, name, everything()) %>%
+                   mutate(Gene_Name = stringr::str_to_title(Gene_Name))
            }
 
            DT::datatable(df_filtered,
