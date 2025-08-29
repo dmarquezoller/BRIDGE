@@ -40,11 +40,22 @@ DepHeatmapUI <- function(id, tbl_name) {
         title = "Heatmap", width = 12, solidHeader = TRUE, status = "info",
         fluidRow(
             column(
-                width = 7,
-                uiOutput(ns("ht_slot"))
+                width = 8,                
+                fluidRow(
+                    column(
+                        width = 8,
+                        uiOutput(ns("ht_slot"))
+                    ),
+                    column(
+                        width = 3,
+                        # Example extra outputs that your actions can fill
+                        htmlOutput("cell_info"),
+                        htmlOutput("selection_table")
+                    )
+                )
             ),
             column(
-                width = 5,
+                width = 2,
                 h1(), p("Change thresholds"),
                 # Use −log10(FDR) to match p_cut <- 10^(−input$heatmap_pcutoff)
                 # sliderInput(ns("heatmap_pcutoff"), "FDR Threshold (−log10):",

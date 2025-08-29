@@ -78,9 +78,48 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         heatmap_ready <- reactiveVal(FALSE)
         depflt_cache <- reactiveValues() # in-memory cache of filtered object per (table, columns_key, p, lfc)
         last_params <- reactiveVal(NULL) # frozen on click
-        roworder <- reactiveVal(NULL)
+        last_mat <- reactiveVal(NULL)
+        roword <- reactiveVal(NULL)
+        ns <- session$ns
+        ich_id <- "dep_ht"
 
+        # InteractiveComplexHeatmapAction click
+        click_action <- function(df, output) {
+            # df has heatmap name, row_index, column_index, etc.
+            output[["cell_info"]] <- renderUI({
+                if (is.null(df)) {
+                    return(NULL)
+                }
+                HTML(sprintf(
+                    "<b>Clicked:</b> heatmap <code>%s</code> — row %s, column %s",
+                    df$heatmap, df$row_index, df$column_index
+                ))
+            })
+        }
+        # InteractiveComplexHeatmapAction brush
+        brush_action <- function(df, output) {
+            r <- unique(unlist(df$row_index))
+            c <- unique(unlist(df$column_index))
+            output[["selection_table"]] <- renderUI({
+                m <- last_mat()
+                if (is.null(m) || length(r) == 0 || length(c) == 0) {
+                    return(NULL)
+                }
+                sel <- round(m[r, c, drop = FALSE], 3)
+                htmltools::HTML(paste0("<pre>", paste(capture.output(print(sel)), collapse = "\n"), "</pre>"))
+            })
+        }
+
+        get_dep_result <- function() {
+            # message("Getting DEP result")
+            key <- rv$current_dep_heatmap_key[[tbl_name]]
+            if (!is.null(key) && cache$exists(key)) {
+                return(cache$get(key))
+            }
+            heatmap_task$result()
+        }
         get_depflt <- function(params) {
+            # message("Getting DEP filtered result")
             key <- paste(
                 tbl_name, params$columns_key,
                 sprintf("pcut=%.4f", params$p_cut),
@@ -105,8 +144,31 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             }
 
             dep_flt <- DEP2::add_rejections(dep_output, alpha = params$p_cut, lfc = params$lfc_cut)
-            depflt_cache[[key]] <- dep_flt
-            dep_flt
+            mats <- get_depflt_matrix(dep_flt)
+            # message("MATS:", head(mats))
+            mat <- mats$mat
+            mat_scaled <- mats$mat_scaled
+            last_mat(mat_scaled)
+            ret_list <- list(mat = mat, mat_scaled = mat_scaled, dep_flt = dep_flt)
+            depflt_cache[[key]] <- ret_list
+            # message("DEP filtered result cached", str(ret_list))
+            ret_list
+        }
+
+        get_depflt_matrix <- function(dep_obj) {
+            # message("Getting DEP filtered matrix")
+            sig <- DEP2::get_signicant(dep_obj) # only significant rows
+            sig <- SummarizedExperiment::assay(sig)
+            mat <- as.matrix(sig)
+            # message("MAT:", head(mat))
+            # sanitize matrix (rows/cols need finite variance and ≥2 finite values)
+            row_ok <- rowSums(is.finite(mat)) >= 2 & apply(mat, 1, function(x) stats::sd(x, na.rm = TRUE) > 0)
+            col_ok <- colSums(is.finite(mat)) >= 2 & apply(mat, 2, function(x) stats::sd(x, na.rm = TRUE) > 0)
+            mat <- mat[row_ok, col_ok, drop = FALSE]
+            mat_scaled <- safe_row_scale(mat)
+            # message("MATFILT:", head(mat_scaled))
+            last_mat(mat_scaled)
+            list(mat = mat, mat_scaled = mat_scaled)
         }
 
         # Background task: compute optimal_k from the filtered (significant) matrix + a DF snapshot
@@ -119,16 +181,9 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
                     # filter with current cutoffs
                     dep_flt <- DEP2::add_rejections(dep_output, alpha = p_cut, lfc = lfc_cut)
-                    sig <- DEP2::get_signicant(dep_flt) # only significant rows
-                    mat <- SummarizedExperiment::assay(sig)
-                    mat <- as.matrix(mat)
-
-                    # sanitize matrix (rows/cols need finite variance and ≥2 finite values)
-                    row_ok <- rowSums(is.finite(mat)) >= 2 & apply(mat, 1, function(x) stats::sd(x, na.rm = TRUE) > 0)
-                    col_ok <- colSums(is.finite(mat)) >= 2 & apply(mat, 2, function(x) stats::sd(x, na.rm = TRUE) > 0)
-                    mat <- mat[row_ok, col_ok, drop = FALSE]
-                    mat_scaled <- safe_row_scale(mat)
-
+                    mats <- get_depflt_matrix(dep_flt)
+                    mat <- mats$mat
+                    mat_scaled <- mats$mat_scaled
                     # avoid device warnings on workers
                     tmp <- tempfile(fileext = ".pdf")
                     pdf(tmp)
@@ -147,12 +202,87 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     }
 
                     # table snapshot based on same filtered/significant set
+                    sig <- DEP2::get_signicant(dep_flt) # only significant rows
                     gene_info <- as.data.frame(SummarizedExperiment::rowData(sig))
                     df <- cbind(gene_info, as.data.frame(mat))
                     df <- df[, c(colnames(gene_info), colnames(mat)), drop = FALSE]
                     df <- stats::na.omit(df)
-
+                    # message("Finishing heatmap task")
                     list(optimal_k = optimal_k, df = df)
+                },
+                seed = TRUE
+            )
+        })
+
+        draw_heatmap_task <- ExtendedTask$new(function(args) {
+            promises::future_promise(
+                {
+                    k <- args$optimal_k
+                    mat <- args$mat
+
+                    # avoid device warnings on workers
+                    tmp <- tempfile(fileext = ".pdf")
+                    pdf(tmp)
+                    on.exit(
+                        {
+                            dev.off()
+                            unlink(tmp)
+                        },
+                        add = TRUE
+                    )
+
+                    # consistent y-limits across clusters
+                    y_lim <- range(mat, na.rm = TRUE)
+                    if (!is.null(k)) {
+                        ht <- ComplexHeatmap::Heatmap(
+                            mat,
+                            row_km = k,
+                            show_row_names = FALSE,
+                            cluster_columns = TRUE
+                        )
+
+                        # custom per-cluster profile panel (grey lines per gene + thick median)
+                        profiles <- ComplexHeatmap::rowAnnotation(
+                            profile = function(index) {
+                                # index are the row indices for this cluster slice
+                                sub <- mat[index, , drop = FALSE]
+                                n <- ncol(sub)
+
+                                # set plotting scales: x = columns (samples), y = expression range
+                                pushViewport(viewport(xscale = c(1, n), yscale = y_lim))
+
+                                # light-grey line per gene
+                                apply(sub, 1, function(v) {
+                                    grid.lines(
+                                        x = seq_len(n), y = v, default.unit = "native",
+                                        gp = gpar(col = "#00000022", lwd = 0.6)
+                                    ) # translucent grey
+                                })
+
+                                # overlay median profile (or use colMeans(sub))
+                                med <- apply(sub, 2, median, na.rm = TRUE)
+                                grid.lines(
+                                    x = seq_len(n), y = med, default.unit = "native",
+                                    gp = gpar(col = "black", lwd = 2)
+                                )
+
+                                # (optional) axes box
+                                grid.rect()
+                                popViewport()
+                            },
+                            width = unit(40, "mm")
+                        )
+                        ht <- ht + profiles
+                    } else {
+                        ht <- ComplexHeatmap::Heatmap(
+                            mat,
+                            cluster_rows = FALSE,
+                            show_row_names = FALSE,
+                            cluster_columns = TRUE
+                        )
+                    }
+                    # message("Finishing heatmap DRAW task", class(ht))
+                    return(ht)
                 },
                 seed = TRUE
             )
@@ -162,8 +292,6 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         observeEvent(input$recompute_heatmap,
             {
                 req(rv$dep_output[[tbl_name]])
-                heatmap_ready(TRUE)
-
                 params <- list(
                     p_cut       = input$heatmap_pcutoff, # raw FDR 0..1
                     lfc_cut     = input$heatmap_fccutoff,
@@ -187,21 +315,107 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 if (!cache$exists(key)) {
                     heatmap_task$invoke(list(
                         dep_output = params$dep_output,
-                        p_cut = params$p_cut, 
+                        p_cut = params$p_cut,
                         lfc_cut = params$lfc_cut
                     ))
                 }
+                heatmap_ready(TRUE)
+
+                ## Now we proceed
+                # res <- get_dep_result()
+                # req(res)
+                # params <- req(last_params())
+                ## message("Got DEP result")
+                # if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+                #
+                # dep_flt_list <- get_depflt(params)
+                # dep_flt <- dep_flt_list$dep_flt
+                # if (params$clustering) {
+                #    k <- as.integer(params$k)
+                #    k_max <- max(2L, nrow(dep_flt) - 1L)
+                #    if (!is.finite(k) || k < 2L) k <- 2L
+                #    if (k > k_max) {
+                #        showNotification(sprintf(
+                #            "Reducing k from %d to %d (only %d rows).",
+                #            input$num_clusters, k_max, nrow(dep_flt)
+                #        ), type = "warning")
+                #        k <- k_max
+                #    }
+                # }
+
+                ## consistent y-limits across clusters
+                # mat <- dep_flt_list$mat_scaled
+                # y_lim <- range(mat, na.rm = TRUE)
+                # if (!is.null(k)) {
+                #    ht <- ComplexHeatmap::Heatmap(
+                #        mat,
+                #        row_km = k,
+                #        show_row_names = FALSE,
+                #        cluster_columns = TRUE
+                #    )
+                #
+                #    # custom per-cluster profile panel (grey lines per gene + thick median)
+                #    profiles <- ComplexHeatmap::rowAnnotation(
+                #        profile = function(index) {
+                #            # index are the row indices for this cluster slice
+                #            sub <- mat[index, , drop = FALSE]
+                #            n <- ncol(sub)
+                #
+                #            # set plotting scales: x = columns (samples), y = expression range
+                #            pushViewport(viewport(xscale = c(1, n), yscale = y_lim))
+                #
+                #            # light-grey line per gene
+                #            apply(sub, 1, function(v) {
+                #                grid.lines(
+                #                    x = seq_len(n), y = v, default.unit = "native",
+                #                    gp = gpar(col = "#00000022", lwd = 0.6)
+                #                ) # translucent grey
+                #            })
+                #
+                #            # overlay median profile (or use colMeans(sub))
+                #            med <- apply(sub, 2, median, na.rm = TRUE)
+                #            grid.lines(
+                #                x = seq_len(n), y = med, default.unit = "native",
+                #                gp = gpar(col = "black", lwd = 2)
+                #            )
+                #
+                #            # (optional) axes box
+                #            grid.rect()
+                #            popViewport()
+                #        },
+                #        width = unit(40, "mm")
+                #    )
+                #    ht <- ht + profiles
+                # } else {
+                #    ht <- ComplexHeatmap::Heatmap(
+                #        mat,
+                #        cluster_rows = FALSE,
+                #        show_row_names = FALSE,
+                #        cluster_columns = TRUE
+                #    )
+                # }
+                # ht
+                # ht <- ComplexHeatmap::draw(ht, merge_legend = TRUE, newpage = FALSE)
+                # roword(ComplexHeatmap::row_order(ht))
+                # ht
+                # heatmap_ready(TRUE)
+
+                # session$onFlushed(function() {
+                #    InteractiveComplexHeatmap::makeInteractiveComplexHeatmap(
+                #        input, output, session,
+                #        ht_list = ht,
+                #        heatmap_id = ich_id,
+                #        click_action = click_action,
+                #        brush_action = brush_action,
+                #        hover_action = NULL,
+                #        res = 96,
+                #        show_cell_fun = TRUE,
+                #        show_layer_fun = TRUE
+                #    )
+                # }, once = TRUE)
             },
             ignoreInit = TRUE
         )
-
-        get_dep_result <- function() {
-            key <- rv$current_dep_heatmap_key[[tbl_name]]
-            if (!is.null(key) && cache$exists(key)) {
-                return(cache$get(key))
-            }
-            heatmap_task$result()
-        }
 
         # Spinner container
         output$ht_slot <- renderUI({
@@ -212,82 +426,205 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 ))
             }
             shinycssloaders::withSpinner(
-                plotOutput(session$ns("ht"), height = "520px"),
+                plotOutput(session$ns("ht"), height = "800px", width = "100%"),
                 type = 8, color = "#2b8cbe", caption = "Loading..."
             )
+            # InteractiveComplexHeatmap::InteractiveComplexHeatmapOutput(
+            #    heatmap_id = ns(ich_id),
+            #    width1 = 700, height1 = 520,
+            #    width2 = 520, height2 = 380,
+            #    layout = "1|(2-3)"
+            # )
         })
 
-        # Plot (depends only on frozen params from the click)
-        output$ht <- renderPlot({
-            params <- req(last_params())
-            res <- get_dep_result()
-            req(res)
-            key <- rv$current_dep_heatmap_key[[tbl_name]]
-            if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+        output$ht <- renderPlot(
+            {
+                req(heatmap_ready())
+                key <- rv$current_dep_heatmap_key[[tbl_name]]
+                # Now we proceed
+                res <- get_dep_result()
+                req(res)
+                params <- req(last_params())
+                # message("Got DEP result")
+                if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
 
-            dep_flt <- get_depflt(params)
-            if (params$clustering) {
-                k <- as.integer(params$k)
-                k_max <- max(2L, nrow(dep_flt) - 1L)
-                if (!is.finite(k) || k < 2L) k <- 2L
-                if (k > k_max) {
-                    showNotification(sprintf(
-                        "Reducing k from %d to %d (only %d rows).",
-                        input$num_clusters, k_max, nrow(dep_flt)
-                    ), type = "warning")
-                    k <- k_max
+                dep_flt_list <- get_depflt(params)
+                dep_flt <- dep_flt_list$dep_flt
+                if (params$clustering) {
+                    k <- as.integer(params$k)
+                    k_max <- max(2L, nrow(dep_flt) - 1L)
+                    if (!is.finite(k) || k < 2L) k <- 2L
+                    if (k > k_max) {
+                        showNotification(sprintf(
+                            "Reducing k from %d to %d (only %d rows).",
+                            input$num_clusters, k_max, nrow(dep_flt)
+                        ), type = "warning")
+                        k <- k_max
+                    }
                 }
-                ht <- DEP2::plot_heatmap(dep_flt, kmeans = TRUE, k = k, seed = 42)
-                roworder(ComplexHeatmap::row_order(ht))
-                ht
-                # tc <- get_tc_cluster(dep_flt, k = k, seed = 42, heatmap_width = 2.5, heatmap_height = 5)
-                # roword <- tc$res %>%
-                #    group_by(Timecourse_cluster) %>%
-                #    group_map(~ pull(.x, name)) %>%
-                #    set_names(unique(tc$res$Timecourse_cluster))
-                # roworder(roword)
-                # tc
-            } else {
-                ht <- DEP2::plot_heatmap(dep_flt)
-                roworder(ComplexHeatmap::row_order(ht))
-                ht
-            }
-        })
+                # consistent y-limits across clusters
+                mat <- dep_flt_list$mat_scaled
+                local_mat <- mat
+                y_lim <- range(local_mat, na.rm = TRUE)
+                if (!all(is.finite(y_lim)) || diff(y_lim) == 0) y_lim <- c(-1, 1)
+
+                if (!is.null(k)) {
+                    ht <- ComplexHeatmap::Heatmap(
+                        local_mat,
+                        row_km = k,
+                        show_row_names = FALSE,
+                        cluster_columns = TRUE
+                    ) + ComplexHeatmap::rowAnnotation(
+                        profile = ComplexHeatmap::anno_empty(which = "row", width = grid::unit(50, "mm")),
+                        annotation_name_gp = grid::gpar(col = NA)
+                    )
+                } else {
+                    ht <- ComplexHeatmap::Heatmap(
+                        local_mat,
+                        cluster_rows = FALSE, show_row_names = FALSE, cluster_columns = TRUE
+                    )
+                }
+
+                # custom per-cluster profile panel (grey lines per gene + thick median)
+                # profiles <- ComplexHeatmap::rowAnnotation(
+                #    profile = ComplexHeatmap::anno_lines(
+                #        mat,  # rows=genes, cols=samples
+                #        ylim = y_lim,
+                #        gp   = grid::gpar(lwd = 0.6),
+                #        pch  = NA,                       # no points
+                #        axis = TRUE
+                #    ),
+                #    width = grid::unit(40, "mm")
+                # )
+
+                ht <- ComplexHeatmap::draw(ht, merge_legend = TRUE, newpage = TRUE)
+                roword(ComplexHeatmap::row_order(ht))
+
+                y_lim <- range(local_mat, na.rm = TRUE)
+                if (!all(is.finite(y_lim)) || diff(y_lim) == 0) y_lim <- c(-1, 1)
+
+                rord <- ComplexHeatmap::row_order(ht)
+                cord <- ComplexHeatmap::column_order(ht)
+                labs <- colnames(local_mat)[cord]
+                xs <- seq_along(cord)
+
+                for (s in seq_along(rord)) {
+                    idx <- rord[[s]]
+                    sub <- local_mat[idx, cord, drop = FALSE]
+                    if (!is.matrix(sub) || nrow(sub) == 0L) next
+
+                    med <- apply(sub, 2, stats::median, na.rm = TRUE)
+                    q1 <- apply(sub, 2, stats::quantile, probs = 0.25, na.rm = TRUE)
+                    q3 <- apply(sub, 2, stats::quantile, probs = 0.75, na.rm = TRUE)
+
+                    # message("ANNO: ", idx, head(med), head(q1), head(q3))
+
+                    ComplexHeatmap::decorate_annotation("profile", slice = s, {
+                        # 1) enter the scaled, clipped viewport
+                        grid::pushViewport(grid::viewport(
+                            xscale = c(1, length(xs)),
+                            yscale = y_lim,
+                            clip   = "on"
+                        ))
+                        on.exit(grid::popViewport(), add = TRUE)
+
+                        # (optional) red border in the scaled space (so you see clipping is active)
+                        grid::grid.rect(gp = grid::gpar(fill = NA, col = "red"))
+
+                        # 2) sanity line IN 'native' coords — should be mid (y=0) if y_lim spans negatives
+                        grid::grid.lines(
+                            x = grid::unit(c(1, length(xs)), "native"),
+                            y = grid::unit(c(0, 0), "native"),
+                            gp = grid::gpar(col = "blue")
+                        )
+
+                        # 3) ribbon (only finite columns)
+                        ok <- is.finite(q1) & is.finite(q3)
+                        if (any(ok)) {
+                            x_ok <- xs[ok]
+                            grid::grid.polygon(
+                                x = grid::unit(c(x_ok, rev(x_ok)), "native"),
+                                y = grid::unit(c(q1[ok], rev(q3[ok])), "native"),
+                                gp = grid::gpar(fill = "#00000022", col = NA)
+                            )
+                        }
+
+                        # 4) median trend (draw in finite runs)
+                        okm <- is.finite(med)
+                        if (any(okm)) {
+                            runs <- split(xs[okm], cumsum(c(1, diff(xs[okm]) != 1)))
+                            for (r in runs) {
+                                grid::grid.lines(
+                                    x = grid::unit(r, "native"),
+                                    y = grid::unit(med[r], "native"),
+                                    gp = grid::gpar(col = "black", lwd = 2)
+                                )
+                            }
+                            grid::grid.points(
+                                x = grid::unit(xs[okm], "native"),
+                                y = grid::unit(med[okm], "native"),
+                                pch = 16, size = grid::unit(0.7, "mm")
+                            )
+                        } else {
+                            grid::grid.text("no data", gp = grid::gpar(cex = 0.6, col = "grey50"))
+                        }
+
+                        # 5) ticks + rotated labels (still inside same viewport)
+                        grid::grid.xaxis(at = xs, label = FALSE)
+                        for (i in xs) {
+                            grid::grid.text(
+                                labs[i],
+                                x = grid::unit(i, "native"),
+                                y = grid::unit(0, "npc") + grid::unit(1.2, "mm"),
+                                rot = 90, just = c(1, 0.5), gp = grid::gpar(cex = 0.55)
+                            )
+                        }
+                    })
+                }
+                invisible(NULL)
+            },
+            res = 96
+        )
+
 
         output$ht_sig <- DT::renderDT({
             params <- req(last_params())
-            roword <- req(roworder())
+            roword <- req(roword())
             res <- get_dep_result()
             req(res)
             key <- rv$current_dep_heatmap_key[[tbl_name]]
             if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-
-            cluster.all <- list()
-            # loop to extract genes for each cluster.
-            for (i in 1:length(roword)) {
-                message("clusters: ", i, head(roword[[i]]))
-                if (i == 1) {
-                    clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
-                    cluster.all <- cbind(clu, paste("cluster", i, sep = ""))
-                } else {
-                    clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
-                    clu <- cbind(clu, paste("cluster", i, sep = ""))
-                    cluster.all <- rbind(cluster.all, clu)
+            cluster.all <- NULL
+            if (!is.null(roword)) {
+                cluster.all <- list()
+                # loop to extract genes for each cluster.
+                for (i in 1:length(roword)) {
+                    # message("clusters: ", i, head(roword[[i]]))
+                    if (i == 1) {
+                        clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
+                        cluster.all <- cbind(clu, paste("cluster", i, sep = ""))
+                    } else {
+                        clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
+                        clu <- cbind(clu, paste("cluster", i, sep = ""))
+                        cluster.all <- rbind(cluster.all, clu)
+                    }
                 }
+                colnames(cluster.all) <- c("Gene_ID", "Cluster")
+                cluster.all <- as.data.frame(cluster.all)
             }
-            colnames(cluster.all) <- c("Gene_ID", "Cluster")
-            cluster.all <- as.data.frame(cluster.all)
 
-            message("clusters: ", head(cluster.all))
-
-            dep_flt <- get_depflt(params)
+            # message("clusters: ", head(cluster.all))
+            dep_flt_list <- get_depflt(params)
+            dep_flt <- dep_flt_list$dep_flt
             if (methods::is(dep_flt, "DEGdata")) {
                 df <- res$df
                 df$name <- rownames(df)
                 df$Gene_ID <- gsub("^(.*)_", "", rownames(df))
                 gene_map <- rv$tables[[tbl_name]][, c("Gene_ID", "Gene_Name")]
                 df <- dplyr::left_join(df, gene_map, by = "Gene_ID")
-                df <- dplyr::left_join(df, cluster.all, by = "Gene_ID")
+                if (!is.null(cluster.all)) {
+                    df <- dplyr::left_join(df, cluster.all, by = "Gene_ID")
+                }
 
                 sig <- as.data.frame(dep_flt@test_result)
                 sig$Gene_ID <- gsub("^(.*)_", "", rownames(dep_flt@test_result))
@@ -296,20 +633,33 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
                 df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]
                 rownames(df_filtered) <- NULL
-                df_filtered <- df_filtered %>%
-                    select(Gene_ID, Gene_Name, Cluster, everything()) %>%
-                    mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                if (!is.null(cluster.all)) {
+                    df_filtered <- df_filtered %>%
+                        select(Gene_ID, Gene_Name, Cluster, everything()) %>%
+                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                } else {
+                    df_filtered <- df_filtered %>%
+                        select(Gene_ID, Gene_Name, everything()) %>%
+                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                }
             } else {
                 rd <- SummarizedExperiment::rowData(dep_flt)
                 sig_genes <- rd$Gene_Name[rd$significant]
                 df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE] %>% dplyr::select(-ID)
-                df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "Gene_ID")
+                if (!is.null(cluster.all)) {
+                    df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "Gene_ID")
+                }
                 rownames(df_filtered) <- NULL
-                df_filtered <- df_filtered %>%
-                    select(Gene_ID, Gene_Name, Cluster, everything()) %>%
-                    mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                if (!is.null(cluster.all)) {
+                    df_filtered <- df_filtered %>%
+                        select(Gene_ID, Gene_Name, Cluster, everything()) %>%
+                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                } else {
+                    df_filtered <- df_filtered %>%
+                        select(Gene_ID, Gene_Name, everything()) %>%
+                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                }
             }
-
             DT::datatable(df_filtered,
                 extensions = "Buttons",
                 options = list(
