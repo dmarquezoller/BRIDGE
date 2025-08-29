@@ -485,18 +485,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     )
                 }
 
-                # custom per-cluster profile panel (grey lines per gene + thick median)
-                # profiles <- ComplexHeatmap::rowAnnotation(
-                #    profile = ComplexHeatmap::anno_lines(
-                #        mat,  # rows=genes, cols=samples
-                #        ylim = y_lim,
-                #        gp   = grid::gpar(lwd = 0.6),
-                #        pch  = NA,                       # no points
-                #        axis = TRUE
-                #    ),
-                #    width = grid::unit(40, "mm")
-                # )
-
+                # custom per-cluster profile panel
                 ht <- ComplexHeatmap::draw(ht, merge_legend = TRUE, newpage = TRUE)
                 roword(ComplexHeatmap::row_order(ht))
 
