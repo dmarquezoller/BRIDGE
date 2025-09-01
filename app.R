@@ -21,7 +21,6 @@ suppressPackageStartupMessages({
 # library(shinydashboard)
 # library(shinyWidgets)
 
-
 # future::plan(multisession, workers = 4)
 future::plan(future.callr::callr, workers = 4)
 set.seed(42)
