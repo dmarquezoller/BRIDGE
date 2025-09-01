@@ -323,12 +323,12 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             {
                 req(rv$dep_output[[tbl_name]])
                 params <- list(
-                    p_cut       = input$heatmap_pcutoff, # raw FDR 0..1
-                    lfc_cut     = input$heatmap_fccutoff,
-                    clustering  = isTRUE(input$clustering),
-                    k           = input$num_clusters,
-                    dep_output  = isolate(rv$dep_output[[tbl_name]]),
-                    datatype    = isolate(rv$datatype[[tbl_name]]),
+                    p_cut = input$heatmap_pcutoff, # raw FDR 0..1
+                    lfc_cut = input$heatmap_fccutoff,
+                    clustering = isTRUE(input$clustering),
+                    k = input$num_clusters,
+                    dep_output = isolate(rv$dep_output[[tbl_name]]),
+                    datatype = isolate(rv$datatype[[tbl_name]]),
                     columns_key <- paste(isolate(rv$time_cols[[tbl_name]]), collapse = "_")
                 )
                 last_params(params)
@@ -376,142 +376,162 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             # )
         })
 
-        output$ht <- renderPlot(
-            {
-                req(heatmap_ready())
-                key <- rv$current_dep_heatmap_key[[tbl_name]]
-                # Now we proceed
-                res <- get_dep_result()
-                req(res)
-                params <- req(last_params())
-                # message("Got DEP result")
-                if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+        output$ht <- renderPlot({
+            req(heatmap_ready())
+            key <- rv$current_dep_heatmap_key[[tbl_name]]
+            # Now we proceed
+            res <- get_dep_result()
+            req(res)
+            params <- req(last_params())
+            # message("Got DEP result")
+            if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
 
-                dep_flt_list <- get_depflt(params)
-                dep_flt <- dep_flt_list$dep_flt
-                if (params$clustering) {
-                    k <- as.integer(params$k)
-                    k_max <- max(2L, nrow(dep_flt) - 1L)
-                    if (!is.finite(k) || k < 2L) k <- 2L
-                    if (k > k_max) {
-                        showNotification(sprintf(
-                            "Reducing k from %d to %d (only %d rows).",
-                            input$num_clusters, k_max, nrow(dep_flt)
-                        ), type = "warning")
-                        k <- k_max
-                    }
+            dep_flt_list <- get_depflt(params)
+            dep_flt <- dep_flt_list$dep_flt
+            if (params$clustering) {
+                k <- as.integer(params$k)
+                k_max <- max(2L, nrow(dep_flt) - 1L)
+                if (!is.finite(k) || k < 2L) k <- 2L
+                if (k > k_max) {
+                    showNotification(sprintf(
+                        "Reducing k from %d to %d (only %d rows).",
+                        input$num_clusters, k_max, nrow(dep_flt)
+                    ), type = "warning")
+                    k <- k_max
                 }
-                # consistent y-limits across clusters
-                local_mat <- dep_flt_list$mat_scaled
-                y_lim <- range(local_mat, na.rm = TRUE)
-                if (!all(is.finite(y_lim)) || diff(y_lim) == 0) y_lim <- c(-1, 1)
+            }
+            # consistent y-limits across clusters
+            local_mat <- dep_flt_list$mat_scaled
+            y_lim <- range(local_mat, na.rm = TRUE)
+            if (!all(is.finite(y_lim)) || diff(y_lim) == 0) y_lim <- c(-1, 1)
 
-                if (!is.null(k)) {
-                    ht <- ComplexHeatmap::Heatmap(
-                        local_mat,
-                        row_km = k,
-                        show_row_names = FALSE,
-                        cluster_columns = TRUE
-                    ) + ComplexHeatmap::rowAnnotation(
-                        profile = ComplexHeatmap::anno_empty(which = "row", width = grid::unit(50, "mm")),
-                        annotation_name_gp = grid::gpar(col = NA)
+            if (!is.null(k)) {
+                ht <- ComplexHeatmap::Heatmap(
+                    local_mat,
+                    row_km = k,
+                    show_row_names = FALSE,
+                    cluster_columns = TRUE
+                ) + ComplexHeatmap::rowAnnotation(
+                    profile = ComplexHeatmap::anno_empty(which = "row", width = grid::unit(55, "mm"), height = grid::unit(30, "mm")),
+                    annotation_name_gp = grid::gpar(col = NA)
+                )
+            } else {
+                ht <- ComplexHeatmap::Heatmap(
+                    local_mat,
+                    cluster_rows = FALSE, show_row_names = FALSE, cluster_columns = TRUE
+                )
+            }
+
+            # custom per-cluster profile panel
+            ht <- ComplexHeatmap::draw(ht, merge_legend = TRUE, newpage = TRUE)
+            rord <- ComplexHeatmap::row_order(ht)
+            if (is.list(rord)) {
+                n_slices <- length(rord)
+            } else {
+                rord <- list(rord)
+                n_slices <- 1L
+            }
+
+            cord <- ComplexHeatmap::column_order(ht)
+            if (is.list(cord)) cord <- cord[[1L]]
+
+            labs <- colnames(local_mat)[cord]
+            xs <- seq_along(cord)
+
+            y_lim <- range(local_mat, na.rm = TRUE)
+            if (!all(is.finite(y_lim)) || diff(y_lim) == 0) y_lim <- c(-1, 1)
+
+            for (s in seq_len(n_slices)) {
+                idx <- rord[[s]]
+                sub <- local_mat[idx, cord, drop = FALSE]
+                if (!is.matrix(sub) || nrow(sub) == 0L) next
+
+                med <- apply(sub, 2, stats::median, na.rm = TRUE)
+                q1 <- apply(sub, 2, stats::quantile, probs = 0.25, na.rm = TRUE)
+                q3 <- apply(sub, 2, stats::quantile, probs = 0.75, na.rm = TRUE)
+
+                ComplexHeatmap::decorate_annotation("profile", slice = s, {
+                    # Scaled, clipped viewport for drawing
+                    grid::pushViewport(grid::viewport(
+                        xscale = c(0.5, length(xs) + 0.5),
+                        yscale = y_lim,
+                        clip   = "on"
+                    ))
+                    on.exit(grid::popViewport(), add = TRUE)
+
+                    # Midline at y = 0 (if in range)
+                    grid::grid.lines(
+                        x = grid::unit(c(1, length(xs)), "native"),
+                        y = grid::unit(c(0, 0), "native"),
+                        gp = grid::gpar(col = "blue")
                     )
-                } else {
-                    ht <- ComplexHeatmap::Heatmap(
-                        local_mat,
-                        cluster_rows = FALSE, show_row_names = FALSE, cluster_columns = TRUE
-                    )
-                }
 
-                # custom per-cluster profile panel
-                ht <- ComplexHeatmap::draw(ht, merge_legend = TRUE, newpage = TRUE)
-                roword(ComplexHeatmap::row_order(ht))
-
-                y_lim <- range(local_mat, na.rm = TRUE)
-                if (!all(is.finite(y_lim)) || diff(y_lim) == 0) y_lim <- c(-1, 1)
-
-                rord <- ComplexHeatmap::row_order(ht)
-                cord <- ComplexHeatmap::column_order(ht)
-                labs <- colnames(local_mat)[cord]
-                xs <- seq_along(cord)
-
-                for (s in seq_along(rord)) {
-                    idx <- rord[[s]]
-                    sub <- local_mat[idx, cord, drop = FALSE]
-                    if (!is.matrix(sub) || nrow(sub) == 0L) next
-
-                    med <- apply(sub, 2, stats::median, na.rm = TRUE)
-                    q1 <- apply(sub, 2, stats::quantile, probs = 0.25, na.rm = TRUE)
-                    q3 <- apply(sub, 2, stats::quantile, probs = 0.75, na.rm = TRUE)
-
-                    # message("ANNO: ", idx, head(med), head(q1), head(q3))
-
-                    ComplexHeatmap::decorate_annotation("profile", slice = s, {
-                        # 1) enter the scaled, clipped viewport
-                        grid::pushViewport(grid::viewport(
-                            xscale = c(1, length(xs)),
-                            yscale = y_lim,
-                            clip   = "on"
-                        ))
-                        on.exit(grid::popViewport(), add = TRUE)
-
-                        # (optional) red border in the scaled space (so you see clipping is active)
-                        grid::grid.rect(gp = grid::gpar(fill = NA, col = "red"))
-
-                        # 2) sanity line IN 'native' coords — should be mid (y=0) if y_lim spans negatives
-                        grid::grid.lines(
-                            x = grid::unit(c(1, length(xs)), "native"),
-                            y = grid::unit(c(0, 0), "native"),
-                            gp = grid::gpar(col = "blue")
+                    # Ribbon (IQR)
+                    ok <- is.finite(q1) & is.finite(q3)
+                    if (any(ok)) {
+                        x_ok <- xs[ok]
+                        grid::grid.polygon(
+                            x = grid::unit(c(x_ok, rev(x_ok)), "native"),
+                            y = grid::unit(c(q1[ok], rev(q3[ok])), "native"),
+                            gp = grid::gpar(fill = "#00000022", col = NA)
                         )
+                    }
 
-                        # 3) ribbon (only finite columns)
-                        ok <- is.finite(q1) & is.finite(q3)
-                        if (any(ok)) {
-                            x_ok <- xs[ok]
-                            grid::grid.polygon(
-                                x = grid::unit(c(x_ok, rev(x_ok)), "native"),
-                                y = grid::unit(c(q1[ok], rev(q3[ok])), "native"),
-                                gp = grid::gpar(fill = "#00000022", col = NA)
+                    # Median trend (draw in finite runs)
+                    okm <- is.finite(med)
+                    if (any(okm)) {
+                        runs <- split(xs[okm], cumsum(c(1, diff(xs[okm]) != 1)))
+                        for (r in runs) {
+                            grid::grid.lines(
+                                x = grid::unit(r, "native"),
+                                y = grid::unit(med[r], "native"),
+                                gp = grid::gpar(col = "black", lwd = 2)
                             )
                         }
+                        grid::grid.points(
+                            x = grid::unit(xs[okm], "native"),
+                            y = grid::unit(med[okm], "native"),
+                            pch = 16, size = grid::unit(0.7, "mm")
+                        )
+                    } else {
+                        grid::grid.text("no data", gp = grid::gpar(cex = 0.6, col = "grey50"))
+                    }
 
-                        # 4) median trend (draw in finite runs)
-                        okm <- is.finite(med)
-                        if (any(okm)) {
-                            runs <- split(xs[okm], cumsum(c(1, diff(xs[okm]) != 1)))
-                            for (r in runs) {
-                                grid::grid.lines(
-                                    x = grid::unit(r, "native"),
-                                    y = grid::unit(med[r], "native"),
-                                    gp = grid::gpar(col = "black", lwd = 2)
-                                )
-                            }
-                            grid::grid.points(
-                                x = grid::unit(xs[okm], "native"),
-                                y = grid::unit(med[okm], "native"),
-                                pch = 16, size = grid::unit(0.7, "mm")
-                            )
-                        } else {
-                            grid::grid.text("no data", gp = grid::gpar(cex = 0.6, col = "grey50"))
-                        }
-
-                        # 5) ticks + rotated labels (still inside same viewport)
+                    # Only draw ticks + labels for the bottom-most slice
+                    if (s == n_slices) {
                         grid::grid.xaxis(at = xs, label = FALSE)
+
                         for (i in xs) {
+                            # measure THIS label at rot=90, cex=0.55
+                            tg <- grid::textGrob(labs[i], gp = grid::gpar(cex = 0.55), rot = 90)
+                            w_nat <- grid::convertX(grid::grobWidth(tg), "native") # used to nudge edges
+                            h_mm <- grid::convertY(grid::grobHeight(tg), "mm", valueOnly = TRUE) # for vertical clearance
+
+                            # default x at the tick
+                            x_pos <- grid::unit(i, "native")
+                            if (i == xs[1]) {
+                                x_pos <- x_pos + 0.2 * w_nat # nudge first label inside
+                            } else if (i == xs[length(xs)]) {
+                                x_pos <- x_pos - 0.2 * w_nat # nudge last label inside
+                            }
+
+                            # center of the label sits at half its height + margin above the bottom
+                            y_pos <- grid::unit(h_mm / 2 + 1.2, "mm") # increase 1.2 -> 2 mm if needed
+
                             grid::grid.text(
                                 labs[i],
-                                x = grid::unit(i, "native"),
-                                y = grid::unit(0, "npc") + grid::unit(1.2, "mm"),
-                                rot = 90, just = c(1, 0.5), gp = grid::gpar(cex = 0.55)
+                                x = x_pos,
+                                y = y_pos,
+                                rot = 90,
+                                just = c(0.5, 0.5), # position by the label's center
+                                gp = grid::gpar(cex = 0.55)
                             )
                         }
-                    })
-                }
+                    }
+                })
                 invisible(NULL)
-            },
-            res = 96
-        )
+            }
+        })
 
 
         output$ht_sig <- DT::renderDT({
@@ -544,10 +564,10 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
             dep_flt_list <- get_depflt(params)
             dep_flt <- dep_flt_list$dep_flt
-            if (methods::is(dep_flt, "DEGdata")) {                
-                df <- res$df                
+            if (methods::is(dep_flt, "DEGdata")) {
+                df <- res$df
                 if (!is.null(cluster.all)) {
-                   df <- dplyr::left_join(df, cluster.all, by = "Gene_ID")
+                    df <- dplyr::left_join(df, cluster.all, by = "Gene_ID")
                 }
                 sig <- as.data.frame(dep_flt@test_result)
                 sig$Gene_ID <- gsub("^.*_", "", rownames(sig))
