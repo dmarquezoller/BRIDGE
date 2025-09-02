@@ -299,8 +299,22 @@ server_function <- function(input, output, session, db_path) {
 
     shiny::observe({
         lapply(rv$table_names, function(tbl_name) {
+            dep_output <- rv$dep_output[[tbl_name]]
+            df_raw <- rv$tables[[tbl_name]]
+            if (identical(rv$datatype[[tbl_name]], "rnaseq")){
+                df_dep <- DEP2::get_results(dep_output) %>%
+                    dplyr::rename(Gene_ID = ID) %>%
+                    dplyr::mutate(
+                        Gene_ID = sub(".*_(ENSDARG[0-9]+)", "\\1", Gene_ID)
+                    )
+                complete <- dplyr::left_join(df_raw, df_dep, by = "Gene_ID")
+            } else {
+                df_dep <- DEP2::get_results(dep_output) %>%
+                    dplyr::rename(Protein_ID = ID)
+                complete <- dplyr::left_join(df_raw, df_dep, by = "Protein_ID")
+            }
             output[[paste0("table_", tbl_name)]] <- DT::renderDT({
-                DT::datatable(rv$tables[[tbl_name]], extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
+                DT::datatable(complete, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
             })
         })
     })
