@@ -376,10 +376,10 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             # )
         })
 
+
         output$ht <- renderPlot({
             req(heatmap_ready())
             key <- rv$current_dep_heatmap_key[[tbl_name]]
-            # Now we proceed
             res <- get_dep_result()
             req(res)
             params <- req(last_params())
@@ -425,6 +425,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             # custom per-cluster profile panel
             ht <- ComplexHeatmap::draw(ht, merge_legend = TRUE, newpage = TRUE)
             rord <- ComplexHeatmap::row_order(ht)
+            roword(rord)
             if (is.list(rord)) {
                 n_slices <- length(rord)
             } else {
@@ -529,21 +530,27 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                         }
                     }
                 })
-                invisible(NULL)
+                #
             }
         })
 
 
+        output$ht_panel <- renderUI({
+            DT::DTOutput(session$ns("ht_sig"), height = "300px")
+        })
+
         output$ht_sig <- DT::renderDT({
+            message("Fetching DEP result for sig table")
+            key <- rv$current_dep_heatmap_key[[tbl_name]]
+            res <- req(get_dep_result())
+            message("Got DEP result for sig table")
             params <- req(last_params())
             roword <- req(roword())
-            res <- get_dep_result()
-            req(res)
+            if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
+            message("Getting DEP flt result for sig table")
             dep_flt_list <- get_depflt(params)
             dep_flt <- dep_flt_list$dep_flt
-            key <- rv$current_dep_heatmap_key[[tbl_name]]
-            if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-
+            message("Got DEP flt result for sig table")
             cluster.all <- NULL
             if (!is.null(roword)) {
                 cluster.all <- list()
@@ -603,11 +610,12 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                         mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 }
             }
+            message("DF filtered: ", nrow(df_filtered), " rows")
             DT::datatable(df_filtered,
                 extensions = "Buttons",
                 options = list(
-                    scrollX = TRUE, pageLength = 10, dom = "Bfrtip",
-                    buttons = c("copy", "csv", "excel", "pdf", "print")
+                    scrollX = TRUE, processing = TRUE, pageLength = 10, dom = "Bfrtip",
+                    buttons <- c("copy", "csv", "excel", "pdf", "print")
                 )
             )
         })

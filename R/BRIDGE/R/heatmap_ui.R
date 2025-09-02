@@ -42,18 +42,6 @@ DepHeatmapUI <- function(id, tbl_name) {
             column(
                 width = 9,
                 uiOutput(ns("ht_slot"))
-                # fluidRow(
-                #    column(
-                #        width = 8,
-                #        uiOutput(ns("ht_slot"))
-                #    ),
-                #    column(
-                #        width = 3,
-                #        # Example extra outputs that your actions can fill
-                #        htmlOutput("cell_info"),
-                #        htmlOutput("selection_table")
-                #    )
-                # )
             ),
             column(
                 width = 2,
@@ -88,7 +76,12 @@ DepHeatmapUI <- function(id, tbl_name) {
             title = "Selected Genes", width = 12, solidHeader = TRUE,
             status = "info", style = "overflow-x: auto",
             collapsible = TRUE, collapsed = FALSE,
-            DT::DTOutput(ns("ht_sig"), height = "300px") # <- fixed id
+            # DT::DTOutput(ns("ht_sig"), height = "300px") |>
+            #    shinycssloaders::withSpinner(
+            #        type = 8, color = "#2b8cbe",
+            #        caption = "Loading...", hide.ui = FALSE
+            #    )
+            uiOutput(ns("ht_panel"))
         )
     )
 }
