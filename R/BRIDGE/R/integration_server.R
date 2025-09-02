@@ -204,7 +204,7 @@ integration_ui <- function(input, output, session, rv) {
             local({
                 table_name <- tbl
                 output_id <- paste0("processed_tbl_", table_name)
-                data <- as.data.frame(rv$intersected_tables_processed[[table_name]])
+                data <- rv$intersected_tables_processed[[table_name]]
                 output[[output_id]] <- DT::renderDT({
                     DT::datatable(data, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 5, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
                 })

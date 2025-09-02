@@ -7,6 +7,27 @@ processed_integration <- function(input, output, session, rv) {
         filtered_genes <- list()
         dim_info <- list()
 
+        get_df_from_dep <- function(dep) {
+            # Extract the necessary columns from SummarizedExperiment::rowData
+            res <- as.data.frame(SummarizedExperiment::rowData(dep))
+            if (rv$datatype[[tbl]] == "rnaseq") {
+                res$names <- rownames(res)
+                res$Gene_Name <- gsub("_.*", "", res$names, perl = TRUE)
+                res$Gene_ID <- gsub(".*_", "", res$names, perl = TRUE)
+            }
+            # rownames(res) <- NULL
+            return(res)
+        }
+
+        get_matrix_from_dep <- function(dep) {
+            mat <- as.data.frame(SummarizedExperiment::assay(dep))
+            mat$names <- rownames(mat)
+            mat$Gene_Name <- gsub("_.*", "", mat$names, perl = TRUE)
+            mat$Gene_ID <- gsub(".*_", "", mat$names, perl = TRUE)
+            # rownames(mat) <- NULL
+            return(mat)
+        }
+
         for (tbl in selected_tables) {
             contrast <- input[[paste0("pi_comparison_selected_", tbl)]]
             dep <- rv$dep_output[[tbl]]
@@ -15,15 +36,7 @@ processed_integration <- function(input, output, session, rv) {
             lfc_col <- paste0(contrast, "_diff")
             padj_col <- paste0(contrast, "_p.adj")
 
-            # Extract the necessary columns from SummarizedExperiment::rowData
-            res <- as.data.frame(SummarizedExperiment::rowData(dep))
-
-            if (rv$datatype[[tbl]] == "rnaseq") {
-                mapper <- rv$tables[[tbl]]
-                mapper <- mapper[, c("Gene_ID", "Gene_Name")]
-                res$Gene_ID <- rownames(res)
-                res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
-            }
+            res <- get_df_from_dep(dep)
 
             if (!all(c("Gene_Name", lfc_col, padj_col) %in% colnames(res))) {
                 shiny::showNotification(paste("Missing columns in table:", tbl), type = "error")
@@ -53,7 +66,7 @@ processed_integration <- function(input, output, session, rv) {
         all_ids <- lapply(filtered_genes, unlist)
         common_ids <- Reduce(intersect, all_ids)
         if (length(common_ids) == 0) {
-            shiny::showNotification("No intersected significant genes found across selected datasets.", type = "error")
+            shiny::showNotification("No intersecting significant genes found across selected datasets.", type = "error")
             rv$intersected_tables_processed <- NULL
             rv$integration_preview_dims <- NULL
             return()
@@ -61,31 +74,53 @@ processed_integration <- function(input, output, session, rv) {
 
         # Subset SummarizedExperiment::assays by intersected gene names
         intersected_list <- lapply(selected_tables, function(tbl) {
-            data <- rv$tables[[tbl]]
-            timepoints <- rv$time_cols[[tbl]]
+dep <- rv$dep_output[[tbl]]
 
-            mat <- as.matrix(data[timepoints])
+res <- get_df_from_dep(dep)
+mat <- get_matrix_from_dep(dep)
+dep_flt <- res[res$Gene_Name %in% common_ids, ]
+mat_flt <- mat[mat$Gene_Name %in% common_ids, ]
+
+data <- cbind(mat_flt, dep_flt)
 
             # Generate unique IDs
             if ("pepG" %in% colnames(data)) {
                 data$unique_id <- paste(data$Gene_Name, data$pepG, sep = "_")
             } else {
                 data$unique_id <- data$Gene_Name
-            }
-
-            rownames(mat) <- data$unique_id
-
-            # Subset by intersected gene names (gene_name, not unique_id)
-            keep <- data$Gene_Name %in% common_ids
-            mat[keep, , drop = FALSE]
+            }            
+            data
         })
 
         names(intersected_list) <- selected_tables
 
+
+        intersected_matrix <- lapply(selected_tables, function(tbl) {            
+            dep <- rv$dep_output[[tbl]]
+
+            mat <- get_matrix_from_dep(dep)
+            data <- mat[mat$Gene_Name %in% common_ids, ]
+            # Generate unique IDs
+            if ("pepG" %in% colnames(data)) {
+                data$unique_id <- paste(data$Gene_Name, data$pepG, sep = "_")
+            } else {
+                data$unique_id <- data$Gene_Name
+            }
+            rownames(data) <- NULL
+            data <- data %>%
+                column_to_rownames("unique_id") %>%
+                dplyr::select(where(is.numeric))
+            data <- as.matrix(data)
+        })
+
+        names(intersected_matrix) <- selected_tables
+
         # Update dimension info
         for (tbl in selected_tables) {
-            dim_info[[tbl]]$intersected <- dim(intersected_list[[tbl]])
-            data_for_elbow <- safe_row_scale(intersected_list[[tbl]])
+            mat <- intersected_matrix[[tbl]]
+
+            dim_info[[tbl]]$intersected <- dim(mat)
+            data_for_elbow <- safe_row_scale(mat)
         }
 
         selected_tables <- names(intersected_list)
@@ -95,22 +130,13 @@ processed_integration <- function(input, output, session, rv) {
         for (tbl in selected_tables) {
             contrast <- input[[paste0("pi_comparison_selected_", tbl)]]
             dep <- rv$dep_output[[tbl]]
+
             lfc_col <- paste0(contrast, "_diff")
-
-            res <- as.data.frame(SummarizedExperiment::rowData(dep))
-
-            if (rv$datatype[[tbl]] == "rnaseq") {
-                mapper <- rv$tables[[tbl]]
-                mapper <- mapper[, c("Gene_ID", "Gene_Name")]
-                res$Gene_ID <- rownames(res)
-                res <- merge(res, mapper, by = "Gene_ID", all.x = TRUE)
-            }
-
+            res <- get_df_from_dep(dep)
             df <- res[, c("Gene_Name", lfc_col)]
             colnames(df) <- c("Gene_Name", paste0("LFC: ", tbl))
             scatter_data <- merge(scatter_data, df, by = "Gene_Name", all.x = TRUE)
         }
-
 
         lfc_cols <- setdiff(colnames(scatter_data), "Gene_Name")
 
@@ -140,6 +166,7 @@ processed_integration <- function(input, output, session, rv) {
         # Save results
         rv$scatter_plots <- plot_list
         rv$intersected_tables_processed <- intersected_list
+        rv$intersected_matrix_processed <- intersected_matrix
         rv$integration_preview_dims <- lapply(selected_tables, function(tbl) {
             list(
                 original = dim(SummarizedExperiment::assay(rv$dep_output[[tbl]])),

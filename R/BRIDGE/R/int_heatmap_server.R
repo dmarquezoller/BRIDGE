@@ -1,10 +1,10 @@
 #' @export
 int_heatmap_server <- function(input, output, session, rv) {
     output$integrated_heatmaps <- shiny::renderUI({
-        shiny::req(rv$intersected_tables_processed, input$heatmap_k)
-        tables <- rv$intersected_tables_processed
+        shiny::req(rv$intersected_matrix_processed, input$heatmap_k)
+        tables <- rv$intersected_matrix_processed
         htmltools::tagList(
-            lapply(names(rv$intersected_tables_processed), function(tbl) {
+            lapply(names(rv$intersected_matrix_processed), function(tbl) {
                 plotOutput(outputId = paste0("heatmap_", tbl), width = "80%")
             }),
             shiny::br(),
@@ -23,9 +23,9 @@ int_heatmap_server <- function(input, output, session, rv) {
     })
 
     shiny::observe({
-        shiny::req(rv$intersected_tables_processed, input$heatmap_k)
+        shiny::req(rv$intersected_matrix_processed, input$heatmap_k)
 
-        all_tables <- rv$intersected_tables_processed
+        all_tables <- rv$intersected_matrix_processed
 
         first_tbl <- all_tables[[1]]
         mat_scaled <- safe_row_scale(first_tbl) # Scale across rows
