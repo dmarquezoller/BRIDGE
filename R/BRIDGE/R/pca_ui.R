@@ -17,7 +17,12 @@ pcaUI <- function(id, tbl_name) {
             title = "PCA loadings", width = 12, solidHeader = TRUE,
             status = "info", style = "overflow-x: auto",
             collapsible = TRUE, collapsed = FALSE,
-            DT::DTOutput(ns("pcs"), height = "300px") 
+            # DT::DTOutput(ns("pcs"), height = "300px") |>
+            #    shinycssloaders::withSpinner(
+            #        type = 8, color = "#2b8cbe",
+            #        caption = "Loading...", hide.ui = FALSE
+            #    )
+            uiOutput(ns("pcs_panel"))
         )
     )
 }
