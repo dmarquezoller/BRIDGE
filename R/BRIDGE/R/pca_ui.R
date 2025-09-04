@@ -1,30 +1,28 @@
 #' @export
-pca_ui <- function(tbl_name) {
-  shinydashboard::box(
-    title = "PCA Analysis", width = 12, solidHeader = TRUE, status = "info",
-    shiny::fluidRow(
-      shiny::column(
-        width = 12,
-       shiny::div(
-          style = "text-align: center; margin-bottom: 20px;",
-          shinyWidgets::actionBttn(
-            inputId = paste0("compute_pca_", tbl_name),
-            label = shiny::span("Compute PCA", style = "color: white;"),
-            style = "simple",
-            color = "primary",
-            size = "md"
-          )
+pcaUI <- function(id, tbl_name) {
+    ns <- NS(id)
+
+    shinydashboard::box(
+        title = "PCA", width = 12, solidHeader = TRUE, status = "info",
+        shinyWidgets::actionBttn(ns("compute"),
+            span("Compute PCA", style = "color: white;"),
+            style = "simple", color = "primary", size = "sm"
+        ),
+        shinycssloaders::withSpinner(
+            plotOutput(ns("plot"), height = "480px"),
+            type = 8, color = "#2b8cbe", caption = "Loading..."
+        ),
+        h5(),
+        shinydashboard::box(
+            title = "PCA loadings", width = 12, solidHeader = TRUE,
+            status = "info", style = "overflow-x: auto",
+            collapsible = TRUE, collapsed = FALSE,
+            # DT::DTOutput(ns("pcs"), height = "300px") |>
+            #    shinycssloaders::withSpinner(
+            #        type = 8, color = "#2b8cbe",
+            #        caption = "Loading...", hide.ui = FALSE
+            #    )
+            uiOutput(ns("pcs_panel"))
         )
-      )
-    ),
-    shiny::fluidRow(
-      shiny::column(
-        width = 12,
-       shiny::div(
-          style = "padding: 10px;",
-          plotOutput(outputId = paste0("pca_", tbl_name)),
-        )
-      )
     )
-  )
 }

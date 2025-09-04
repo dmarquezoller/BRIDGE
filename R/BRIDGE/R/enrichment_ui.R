@@ -1,23 +1,18 @@
 #' @export
-enrichment_settings_ui <- function(tbl_name, rv) {
-    shinydashboard::box(title = "Settings", width = 5, solidHeader = TRUE, status = "info", 
-        shinyWidgets::virtualSelectInput(paste0("comparison_db_", tbl_name), "Select where to perform enrichment analysis:", 
-            choices = c("GO", "KEGG", "REACTOME"),
-            selected = "GO"),
-        shinyWidgets::virtualSelectInput(paste0("contrasts_enrichment_", tbl_name), "Select Contrast:", 
-            choices = rv$contrasts[[tbl_name]], 
-            selected = rv$contrasts[[tbl_name]][1]
+EnrichmentUI <- function(id, tbl_name) {
+    ns <- NS(id)
+    tagList(
+        shinydashboard::box(
+            title = "Enrichment settings", width = 12, solidHeader = TRUE, status = "info",
+            fluidRow(
+                column(4, selectInput(ns("comparison_db"), "Database", choices = c("GO", "KEGG", "Reactome"))),
+                column(4, uiOutput(ns("contrast_ui"))),
+                column(4, shinyWidgets::actionBttn(ns("compute_enrichment"), span("Compute Enrichment", style = "color: white;"), style = "simple", color = "primary", size = "sm"))
+            )
         ),
-        shinyWidgets::actionBttn(paste0("compute_enrichment_", tbl_name), shiny::span("Compute Enrichment Plot", style = "color: white;"), style = "simple", color = "primary", size = "sm")
-
-                           
-    )
-}
-
-#' @export
-enrichment_plots_ui <- function(tbl_name) {
-    shinydashboard::box(title = "Enrichment plots", width = 7, solidHeader = T, status = "info",
-        h3(),
-        shiny::uiOutput(paste0("enrichment_", tbl_name)), 
+        shinydashboard::box(
+            title = "Enrichment results", width = 12, solidHeader = TRUE, status = "info",
+            uiOutput(ns("enrichment")) # will insert plotOutput(ns("enrichment_plot")) or a message
+        )
     )
 }

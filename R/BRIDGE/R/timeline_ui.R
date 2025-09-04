@@ -1,43 +1,34 @@
-#' @export
-timeline_gene_search <- function(tbl_name, rv) {
-    if (rv$datatype[[tbl_name]] == "rnaseq") {
-        scale_choices <- c("Continous", "Log-scale", "TPM", "FPKM", "TMM", "CPM")
-    } else {
-        scale_choices <- c("Continous", "Log-scale", "Total Intensity", "Median Normalization")
-    }
+TimelineUI <- function(id, tbl_name) {
+    ns <- NS(id)
+    tagList(
         shinydashboard::box(
-        title = "Gene Search", width = 6, solidHeader = TRUE, status = "info", 
-        selectizeInput(
-            inputId = paste0("search_gene_", tbl_name),
-            label = "Search your gene of interest:",
-            choices = NULL,
-            multiple = TRUE
-        ),
-        shiny::selectInput(
-            inputId = paste0("scale_", tbl_name),
-            label = "Select scale:",
-            choices = scale_choices,
-            selected = "Continous"
+            title = "Timeline", width = 12, solidHeader = TRUE, status = "info",
+            fluidRow(
+                column(4, selectizeInput(ns("search_gene"), "Gene(s)", choices = NULL, multiple = TRUE)),
+                column(4, selectInput(ns("scale"), "Scale",
+                    choices = c(
+                        "Continous", "Log-scale", "Median Normalization",
+                        "Total Intensity", "FPKM", "TPM", "TMM", "CPM"
+                    ),
+                    selected = "Continous"
+                ))
+            ),
+            hr(),
+            # DT::DTOutput(ns("time_plot_dt")),
+            # br(),
+            plotOutput(ns("time_plot"), height = "520px")
         )
     )
 }
 
 #' @export
-timeline_plot <- function(tbl_name) {
+TimelineTableUI <- function(id, tbl_name) {
+    ns <- NS(id)
     shinydashboard::box(
-        title="Expression Timeline", width = 12, solidHeader = T, status = "info",   
+        title = "Table Entries", width = 12, solidHeader = T, status = "info", style = "overflow-x: auto", collapsible = T, collapsed = F,
         h3(),
-        plotOutput(paste0("time_plot_", tbl_name)),
-        h3()
-    )
-}
-
-#' @export
-timeline_table <- function(tbl_name) {
-    shinydashboard::box(
-        title="Table Entries", width = 12, solidHeader = T, status = "info", style= "overflow-x: auto", collapsible = T, collapsed = F, 
-        h3(), 
-        DT::DTOutput(paste0("time_plot_dt_", tbl_name), height = "300px"), 
+        # DT::DTOutput(ns(paste0("time_plot_dt_", tbl_name)), height = "300px"),
+        DT::DTOutput(ns("time_plot_dt")),
         h3()
     )
 }
