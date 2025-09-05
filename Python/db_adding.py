@@ -1,6 +1,7 @@
-import sqlite3
-import pandas as pd
 import os
+import sqlite3
+
+import pandas as pd
 
 ############# REQUIREMENTS OF YOUR DATA #############
 #                                                   #
@@ -11,40 +12,54 @@ import os
 #        - protein id -> renamed -> Protein ID      #
 #      All of the name rules specified must be      #
 #      strictly followed.                           #
-#   3. All the timeline columns must have a         #
-#      single integer in the end specifying         #
-#      the replicate                                #
-#        -i.e. X6_hpf_1                             #
-#   4. There must be no NAs in any identifier       #
+#   3. All the value columns must have an           #
+#      integer in the end specifying                #
+#      the replicate, preceded by a "_".            #
+#      No more underscores must be used in the name.#
+#      For more separations, use other symbols.     #
+#        -i.e. X6.hpf_1                             #
+#   4. There can not be NAs in any identifier       #
 #      columns                                      #
 #   5. The name of the table must adhere to the     #
 #      following structure:                         #
-#        - specie_datatype_(optional info)_id       #
+#        - species_datatype_(optional info)_id      #
 #      i.e. zebrafish_rnaseq_investigatorA_1        #
-#        - The available datatypes are:             #
-#           rnaseq, phosphoproteomics and           #
-#           proteomics                              #
 #   6. For phosphoproteomics an additional          #
 #      identifier is needed: the peptide with the   #
 #      mutation, and it has to be called pepG       #
-#      i.e. AAAGDEAGGsSR_p1_ac0                     #                
+#      i.e. AAAGDEAGGsSR_p1_ac0                     #
+#   7. If adding your own processed data ensure     #
+#      that its an object of class                  #
+#      SummarizedExperiment and that it has         #
+#      been done with the same columns that the     #
+#      raw table has (for matching reasons          #
+#      between cache key and tables).               #
 #                                                   #
 #                                                   #
 #   * If any of these rules is not met for a        #
 #     table submited to the database, the app       #
-#     will most likely crash                        #                            
+#     will most likely crash. Read them carefuly    #
+#     and ensure that your database meets all the   #
+#     requirements                                  #
+#                                                   #
+#   IMPORTANT                                       #
+#      R packages required:                         #
+#       - storr, DBI, RSQLite                       #
 #                                                   #
 #####################################################
 
 
 # === Function to enable column selection ===
 
+
 def prompt_column_selection(df, prompt_text):
     print(f"\n{prompt_text}")
     print("Available columns:")
     for idx, col in enumerate(df.columns):
         print(f"{idx}: {col}")
-    indices = input(f"Enter {prompt_text} numbers sepparated by commas or ranges (e.g. 1,2,3,5:10): ")
+    indices = input(
+        f"Enter {prompt_text} numbers separated by commas or ranges (e.g. 1,2,3,5:10): "
+    )
     selected = []
 
     for part in indices.split(","):
@@ -52,7 +67,9 @@ def prompt_column_selection(df, prompt_text):
         if ":" in part:
             start, end = part.split(":")
             if start.strip().isdigit() and end.strip().isdigit():
-                selected.extend(df.columns[int(i)] for i in range(int(start), int(end) + 1))
+                selected.extend(
+                    df.columns[int(i)] for i in range(int(start), int(end) + 1)
+                )
         elif part.isdigit():
             selected.append(df.columns[int(part)])
 
@@ -67,7 +84,14 @@ def main():
         return
 
     # === Step 2: Read CSV ===
-    df = pd.read_csv(csv_path)
+    # Auto-detect delimiter (comma or tab)
+    with open(csv_path, "r") as f:
+        first_line = f.readline()
+        if "\t" in first_line:
+            sep = "\t"
+        else:
+            sep = ","
+    df = pd.read_csv(csv_path, sep=sep)
     print(f"CSV loaded with {df.shape[0]} rows and {df.shape[1]} columns.")
 
     # === Step 3: Ask user to select identifier and timepoint columns ===
@@ -81,13 +105,13 @@ def main():
         return
 
     # === Step 5: Connect to SQLite ===
-    db_path = input("\nEnter path to the database: ").strip() 
+    db_path = input("\nEnter path to the database: ").strip()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     # === Step 6: Upload table ===
     try:
-        df.to_sql(table_name, conn, if_exists='replace', index=False)
+        df.to_sql(table_name, conn, if_exists="replace", index=False)
         print(f"Table '{table_name}' uploaded to the database.")
     except Exception as e:
         print(f"Error uploading the table to the database: {e}")
@@ -107,14 +131,50 @@ def main():
     id_str = ",".join(id_cols)
     tp_str = ",".join(tp_cols)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT OR REPLACE INTO table_metadata (table_name, identifier_columns, timepoint_columns)
         VALUES (?, ?, ?)
-    """, (table_name, id_str, tp_str))
-
+    """,
+        (table_name, id_str, tp_str),
+    )
     conn.commit()
-    conn.close()
     print("Metadata added to 'table_metadata'.")
+
+    # === Step 8: Prompt addition of processed data ===
+    processed = (
+        input("\nDo you want to add processed data for the raw table? (y/n): ")
+        .strip()
+        .lower()
+    )
+    if processed == "y":
+        key = f'{table_name}_{"_".join(tp_cols)}_dep'
+        rds_path = input(
+            "Enter the path to the RDS file containing the processed R object: "
+        ).strip()
+        if not os.path.exists(rds_path):
+            print("RDS file does not exist.")
+        else:
+            import rpy2.robjects as ro
+
+            ro.r(f"""
+            library(storr)
+            # Load processed object from RDS
+            obj <- readRDS("{rds_path}")
+            con <- DBI::dbConnect(RSQLite::SQLite(), "{db_path}")
+            # Use connection 'conn' to the database and create cache object
+            cache <- storr::storr_dbi(
+                tbl_data = "storr_data",
+                tbl_keys = "storr_keys",
+                con = con
+            )      
+            # Store object with the generated key
+            cache$set(key = "{key}", value = obj)
+            """)
+            print("Processed data added correctly to cache")
+    conn.close()
+    print("done")
+
 
 if __name__ == "__main__":
     main()

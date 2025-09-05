@@ -1,0 +1,36 @@
+<h2>Data Selection</h2>
+
+<p>
+The <strong>Data Selection</strong> panel is the entry point for querying and importing datasets from the underlying omics database.
+This step is fundamental, as all downstream visualizations and analyses are dynamically generated based on the data retrieved here.
+</p>
+
+<h3>How Data Import Works</h3>
+
+<p>
+When you interact with the Data Selection panel, the application executes structured SQL queries against the preloaded <strong>SQLite database</strong>.
+This database is expected to contain the data tables accompanied by a standardized metadata table that define available species, time-points, experimental conditions, and data modalities.
+For a correct creation of a database use the provided </strong>Python scripts</strong> that will guide you through the process.
+</p>
+
+<p>
+Upon selecting a species, you will have to select which table to import from that species, and then which columns of this table are the ones in which you are interested to study.
+Thanks to this we allow the possibility of studying subsets of the tables apart from the complete table.
+</p>
+
+<p>
+Aside from the previous explained selections, the user is asked to select an annotation file. The database allows multiple annotation files of the same species to take into consideration different genome versions.
+Thanks to this, the user can select the annotation of the correct genome version to conduct the analyses even if different tables come from different versions.
+</p>
+
+<h3>Metadata-Driven Dynamic UI</h3>
+
+<p>
+All the settings you have to select are tailored with the metadata, meaning that the available tables to select will exclusively be the ones belonging to the selected species.
+similarly, the columns to select will be the actual columns of the table selected. Thanks to this, the importing of the data is a highly flexible and user-friendly process.
+</p>
+
+<p>
+Once the dataset is selected and loaded, it becomes available to all modules within both the <strong>Individual Exploration</strong> and <strong>Integration</strong> sections of the app.
+Subsequent analyses will respect these selections, maintaining consistency and reproducibility across your session.
+</p>

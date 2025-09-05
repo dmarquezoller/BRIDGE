@@ -1,0 +1,79 @@
+<h2>Individual Exploration</h2>
+
+<p>
+The <strong>Individual Exploration</strong> section allows you to deeply explore the imported datasets individually. 
+It provides a suite of interactive and static visualizations to help identify patterns, assess data quality, and extract biologically meaningful insights from your data.
+</p>
+
+<h3>Available Plots and Analyses</h3>
+
+<ul>
+  <li>
+    <strong>Raw Heatmap:</strong> 
+    Displays the unprocessed expression matrix to allow inspection of the raw signal across samples. 
+    This is useful for identifying batch effects or global expression trends prior to normalization.
+    There is no further customization for this plot.
+  </li>
+
+  <li>
+    <strong>DEP Heatmap:</strong> 
+    Uses differential expressed analyzed data to obtain a heatmap. For this plot you can also select different <strong>thresholds</strong> and if you want <strong>clustering</strong> and how many clusters. 
+
+    Once a heatmap has been computed, you will be provided with the <string>optimal number of clusters</strong> following the <i>Elbow rule</i>.
+    This value is only provided for the complete loaded table with default thresholds, changing the thresholds will not change this recommendation. 
+    Below the plot you can also find a table with the processed values, including p-values or log fold changes.
+    The matrix needed for this heatmap is obtained through a heavy computation, thanks to this, this matrix is stored in the <strong>cache</strong> so the next time is much faster.
+  </li>
+
+  <li>
+    <strong>Volcano Plot:</strong> 
+    Visualizes differential expression between selected conditions. 
+    Features are plotted by <em>log<sub>2</sub> fold change</em> and <em>-log<sub>10</sub>(p-value)</em>. 
+    You can adjust significance thresholds, select which contrast to see and highlight a particular gene.
+    Moreover, hovering over the plot shows the gene name each dot represents.
+    
+    Below the plot you can also find a table containing the data of the significant genes.
+  </li>
+
+  <li>
+    <strong>Gene Expression:</strong> 
+    Shows temporal expression trends for selected genes across time-points. 
+    You can see the expression of one or multiple genes at the same time. The search bar is connected to the database so it shows all available genes.
+    You can also choose different kinds of transformations:
+    <ul>
+        <li>
+            For <strong>Proteomics</strong> and <strong>Phosphoproteomics</strong>: Continuous, Log-Scale, Total Intensity Transform and Median normalization.
+        </li>
+
+        <li>
+            For <strong>RNA-seq</strong>: Continuous, Log-Scale, TPM, FPKM, TMM and CPM.
+        </li>
+    </ul>
+    Below the plot you can also find a table containing the information of the browsed genes.
+  </li>
+
+  <li>
+    <strong>Enrichment Analysis:</strong> 
+    Performs enrichment analysis on significant data. You can choose both which comparison to enrich and which database to use (GO, KEGG or REACTOME).
+    The plot shows the <strong>dot plot</strong> regarding the enrichment analysis.
+  </li>
+
+  <li>
+    <strong>PCA (Principal Component Analysis):</strong> 
+    Performs a simple PCA (Principal Component Analysis to study the global variance distribution)
+  </li>
+</ul>
+
+<h3>Interactive Features</h3>
+<p>
+No plot is rendered until the user computes it pushing the corresponding button, avoiding rendering time for plots you are not interested in. 
+All the plots are interactive and react to the changes of settings.
+</p>
+
+<div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px; margin: 10px 0;">
+	All this plots and tables are contained inside one <strong>collapsible tab</strong>. For each dataset you load, an identical but <strong>independent</strong> tab will be generated.
+</div>
+
+<p>
+This section is designed to facilitate intuitive exploration of single-layer omics data and serves as a foundation before proceeding to integrative analysis.
+</p>
