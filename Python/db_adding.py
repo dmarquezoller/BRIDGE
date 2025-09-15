@@ -58,7 +58,7 @@ def prompt_column_selection(df, prompt_text):
     for idx, col in enumerate(df.columns):
         print(f"{idx}: {col}")
     indices = input(
-        f"Enter {prompt_text} numbers separated by commas or ranges (e.g. 1,2,3,5:10): "
+        f"Enter {prompt_text} numbers separated by commas or ranges using ':'. (e.g. 1,2,3,5:10): "
     )
     selected = []
 
@@ -99,6 +99,9 @@ def main():
     tp_cols = prompt_column_selection(df, "timepoint columns")
 
     # === Step 4: Ask for table name ===
+    print("Remember to follow the naming rules: <specie>_<datatype>_<free identifier>_<replicate>." \
+    "For example 'zebrafish_proteomics_test_1'." \
+    "For further rules, refer to the README.")
     table_name = input("\nEnter a name for the new table in the database: ").strip()
     if not table_name.isidentifier():
         print("Invalid table name.")

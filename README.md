@@ -34,7 +34,79 @@ touch user_database.db
 ```
 Then, after creating the empty database, it has to be filled with tables and annotation files, for that, two scripts are provided that will guide the user through the process.
 
-Both scripts assume certain homogeneity in the data. For a correct functioning of the scripts and the app, please check the **rules** inside both Python scripts.
+Both scripts assume certain homogeneity in the data. For a correct functioning of the scripts and the app, that is why we put together this set of rulese to be followed both in the manual curation of the data prior to the database creation and in the creation of the database itself.
+
+####  Requirements for Your Data
+
+Before submitting tables to the database, please ensure your data follows **all** of the rules below.  
+If any rule is not met, the app will most likely crash.  
+
+---
+
+##### 1. File format
+- The file **must be a CSV**.
+
+---
+
+##### 2. Identifier columns
+- You must provide **at least 3 identifier columns**, with exact names:
+  - `Gene_Name` (from gene name)
+  - `Gene_ID` (from gene id)
+  - `Protein_ID` (from protein id)  
+
+All naming rules must be followed **strictly**.
+
+---
+
+##### 3. Value columns
+- All value (measurement) columns must end with an integer specifying the replicate, **preceded by an underscore** (`_`).  
+- **No additional underscores** are allowed in the column name.  
+- For extra separation, use other symbols instead.  
+
+Example:  
+`X6.hpf_1`
+
+---
+
+##### 4. Missing values
+- **No `NA`s** are allowed in any identifier columns.
+
+---
+
+##### 5. Table name
+- The name of the table must follow this structure: 
+`<species>_<datatype>_<optional info>_<id>`
+
+Example:
+`zebrafish_proteomics_test_1`
+
+---
+
+##### 6. Phosphoproteomics data
+- An additional identifier is required: **the peptide with the mutation**, named `pepG`.  
+
+Example:
+`AAAGDEAGGsSR_p1_ac0`
+
+---
+
+##### 7. Processed data
+- If you are adding processed data, ensure:
+  - It is an object of class **`SummarizedExperiment`**.  
+  - It was generated using the **same columns** as the raw table (for matching cache keys and tables).
+
+---
+
+####  Important Notes
+- Read these rules carefully and verify that your database meets all requirements.  
+- Otherwise, the app may fail to run properly.  
+
+##### Required R packages:
+- `storr`
+- `DBI`
+- `RSQLite`
+
+
 
 ```bash
 python /BRIDGE/Python/db_adding.py

@@ -73,6 +73,9 @@ def main():
         return
 
     # === Ask for table name ===
+    print("Remember to follow the naming rules: <specie>_annotation_<version>." \
+    "For example 'zebrafish_annotation_GRCz11115'." \
+    "For further rules, refer to the README.")
     table_name = input(
         "Enter a name for the annotation table in the database: "
     ).strip()
