@@ -185,7 +185,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
             } else {
                 highlight <- character(0)
             }
-            message("Highlighting: ", paste(highlight, collapse = ", "), "\nDFnames: ", paste(head(df$name), collapse = ", "))
+            # message("Highlighting: ", paste(highlight, collapse = ", "), "\nDFnames: ", paste(head(df$name), collapse = ", "))
             # pre-compute helpers
             df$neglog10p <- -log10(df$pval)
             is_sig <- is.finite(df$log2FC) & is.finite(df$neglog10p) &
