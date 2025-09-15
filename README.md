@@ -34,8 +34,6 @@ touch user_database.db
 ```
 Then, after creating the empty database, it has to be filled with tables and annotation files, for that, two scripts are provided that will guide the user through the process.
 
-Both scripts assume certain homogeneity in the data. For a correct functioning of the scripts and the app, that is why we put together this set of rulese to be followed both in the manual curation of the data prior to the database creation and in the creation of the database itself.
-
 ```bash
 python /BRIDGE/Python/db_adding.py
 ```
@@ -48,6 +46,8 @@ Both this scripts can be executed as many times as needed.
 
 After all this, the user will have the usable database.
 
+Both scripts assume certain homogeneity in the data. For a correct functioning of the scripts and the app, that is why we put together this set of rules to be followed both in the manual curation of the data prior to the database creation and in the creation of the database itself.
+
 ###  Requirements for Your Data
 
 Before submitting tables to the database, please ensure your data follows **all** of the rules below.  
@@ -55,7 +55,7 @@ If any rule is not met, the app will most likely crash.
 
 ---
 
-#### <u>1. File format</u>
+#### 1. File format
 - The file **must be a CSV**.
 
 #### 2. Identifier columns
