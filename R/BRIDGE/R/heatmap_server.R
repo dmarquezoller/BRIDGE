@@ -19,10 +19,10 @@ RawHeatmapServer <- function(id, rv, tbl_name) {
         task <- ExtendedTask$new(function(raw_input) {
             promises::future_promise({
                 raw_data <- raw_input$raw_data
-                timepoint_cols <- raw_input$timepoint_cols
+                datapoint_cols <- raw_input$datapoint_cols
                 datatype <- raw_input$datatype
 
-                clean <- as.matrix(raw_data[timepoint_cols])
+                clean <- as.matrix(raw_data[datapoint_cols])
                 rn <- switch(datatype,
                     proteomics        = raw_data$Gene_Name,
                     rnaseq            = raw_data$Gene_Name,
@@ -38,7 +38,7 @@ RawHeatmapServer <- function(id, rv, tbl_name) {
                 ready(TRUE)
                 task$invoke(list(
                     raw_data       = isolate(rv$tables[[tbl_name]]),
-                    timepoint_cols = isolate(rv$time_cols[[tbl_name]]),
+                    datapoint_cols = isolate(rv$data_cols[[tbl_name]]),
                     datatype       = isolate(rv$datatype[[tbl_name]])
                 ))
             },
@@ -329,7 +329,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     k = input$num_clusters,
                     dep_output = isolate(rv$dep_output[[tbl_name]]),
                     datatype = isolate(rv$datatype[[tbl_name]]),
-                    columns_key <- paste(isolate(rv$time_cols[[tbl_name]]), collapse = "_")
+                    columns_key <- paste(isolate(rv$data_cols[[tbl_name]]), collapse = "_")
                 )
                 last_params(params)
 

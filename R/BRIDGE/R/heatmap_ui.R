@@ -21,7 +21,7 @@ RawHeatmapUI <- function(id, tbl_name) {
                     span("Compute Raw Heatmap", style = "color:white;"),
                     style = "simple", color = "primary", size = "sm"
                 ),
-                p("Might take long for first time computation.")
+                p("Might take long for first data computation.")
             ),
             column(
                 7,

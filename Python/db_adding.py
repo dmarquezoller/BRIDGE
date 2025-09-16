@@ -87,7 +87,7 @@ def main():
         "--id-cols", help="Comma-separated indices for identifier columns (e.g. 0,1,2)"
     )
     parser.add_argument(
-        "--tp-cols", help="Comma-separated indices for timepoint columns (e.g. 3,4,5)"
+        "--tp-cols", help="Comma-separated indices for datapoint columns (e.g. 3,4,5)"
     )
     parser.add_argument(
         "--processed", action="store_true", help="Add processed data for the raw table"
@@ -145,7 +145,7 @@ def main():
             elif part.isdigit():
                 tp_cols.append(df.columns[int(part) - 1])
     else:
-        tp_cols = prompt_column_selection(df, "timepoint columns")
+        tp_cols = prompt_column_selection(df, "datapoint columns")
 
     if args.table:
         table_name = args.table.strip()
@@ -179,7 +179,7 @@ def main():
         CREATE TABLE IF NOT EXISTS table_metadata (
             table_name TEXT PRIMARY KEY,
             identifier_columns TEXT,
-            timepoint_columns TEXT
+            datapoint_columns TEXT
         )
     """)
 
@@ -188,7 +188,7 @@ def main():
 
     cursor.execute(
         """
-        INSERT OR REPLACE INTO table_metadata (table_name, identifier_columns, timepoint_columns)
+        INSERT OR REPLACE INTO table_metadata (table_name, identifier_columns, datapoint_columns)
         VALUES (?, ?, ?)
     """,
         (table_name, id_str, tp_str),

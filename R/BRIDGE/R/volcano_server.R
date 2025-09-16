@@ -126,7 +126,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                     highlight    = isolate(input$volcano_search) |> stringr::str_trim(),
                     dep_output   = isolate(rv$dep_output[[tbl_name]]),
                     datatype     = isolate(rv$datatype[[tbl_name]]),
-                    columns_key  = paste(sort(trimws(isolate(rv$time_cols[[tbl_name]]))), collapse = "_")
+                    columns_key <- paste(sort(trimws(isolate(rv$data_cols[[tbl_name]]))), collapse = "_")
 
                 )
                 last_params(params)

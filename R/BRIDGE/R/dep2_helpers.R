@@ -1,7 +1,7 @@
 #' @export
 dep2_proteomics <- function(df, tbl_name, rv) {
     unique_pg <- DEP2::make_unique(df, names = "Gene_Name", ids = "Protein_ID", delim = ";")
-    ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_pg))
+    ecols <- match(trimws(rv$data_cols[[tbl_name]]), colnames(unique_pg))
     se_pg <- DEP2::make_se_parse(unique_pg, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
     filter_pg <- DEP2::filter_se(se_pg, thr = 1, fraction = 0.3)
     impute_pg <- DEP2::impute(filter_pg, fun = "MinDet")
@@ -15,7 +15,7 @@ dep2_proteomics <- function(df, tbl_name, rv) {
 dep2_phosphoproteomics <- function(df, tbl_name, rv) {
     # df <- df[!grepl("p0", df$pepG), ] # Remove the p0   NOT RECOMMENDED!
     unique_phos <- DEP2::make_unique(df, names = "pepG", ids = "Protein_ID", delim = ";")
-    ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_phos))
+    ecols <- match(trimws(rv$data_cols[[tbl_name]]), colnames(unique_phos))
     se_phos <- DEP2::make_se_parse(unique_phos, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
     filter_phos <- DEP2::filter_se(se_phos)
     impute_phos <- DEP2::impute(filter_phos, fun = "MinDet")
@@ -28,7 +28,7 @@ dep2_phosphoproteomics <- function(df, tbl_name, rv) {
 #' @export
 dep2_rnaseq <- function(df, tbl_name, rv) {
     unique_dds <- df
-    ecols <- match(trimws(rv$time_cols[[tbl_name]]), colnames(unique_dds))
+    ecols <- match(trimws(rv$data_cols[[tbl_name]]), colnames(unique_dds))
     data_mat <- as.matrix(unique_dds[, ecols])
     rownames(data_mat) <- paste0(unique_dds$Gene_Name, "_", unique_dds$Gene_ID)
     dds <- DEP2::make_dds_parse(data_mat, mode = "delim", sep = "_")

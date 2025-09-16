@@ -36,7 +36,7 @@ integration_ui <- function(input, output, session, rv) {
                             DT::DTOutput("integration_combined_table")
                         ),
                         shinydashboard::box(
-                            title = "Integrated Timeline Plot", width = 12, solidHeader = TRUE, status = "info",
+                            title = "Integrated dataline Plot", width = 12, solidHeader = TRUE, status = "info",
                             selectizeInput(
                                 inputId = "search_gene_integration",
                                 label = "Search your gene of interest:",
@@ -49,7 +49,7 @@ integration_ui <- function(input, output, session, rv) {
                                 choices = c("Continous", "Log-scale"),
                                 selected = "Continous"
                             ),
-                            plotOutput("integration_timeline_plot")
+                            plotOutput("integration_dataline_plot")
                         )
                     )
                 ),
@@ -219,7 +219,7 @@ integration_ui <- function(input, output, session, rv) {
     output$integration_col_selector <- shiny::renderUI({
         shiny::req(length(input$integration) > 0)
         lapply(input$integration, function(int_tbl) {
-            cols <- rv$time_cols[[int_tbl]]
+            cols <- rv$data_cols[[int_tbl]]
             shinyWidgets::pickerInput(
                 inputId = paste0("cols_selected_int", int_tbl),
                 label = paste0("Select columns from ", int_tbl, " to load:"),

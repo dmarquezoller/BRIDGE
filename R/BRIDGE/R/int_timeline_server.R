@@ -1,5 +1,5 @@
 #' @export
-int_timeline_server <- function(input, output, session, data_combined, reference_time_names) {
+int_dataline_server <- function(input, output, session, data_combined, reference_data_names) {
     processed_data <- reactive({
         shiny::req(input$scale_integration)
         scale_input <- input$scale_integration
@@ -24,17 +24,17 @@ int_timeline_server <- function(input, output, session, data_combined, reference
         data <- selected_data()
 
         # Clean stage names
-        unique_timepoints <- reference_time_names %>%
+        unique_datapoints <- reference_data_names %>%
             gsub("_[0-9]+$", "", .) %>%
             gsub("[_.-]+$", "", .) %>%
             unique()
 
         # Reshape
         data_long <- data %>%
-            pivot_longer(cols = all_of(reference_time_names), names_to = "Stage", values_to = "Expression") %>%
+            pivot_longer(cols = all_of(reference_data_names), names_to = "Stage", values_to = "Expression") %>%
             mutate(
                 StageGroup = gsub("[0-9]+$", "", Stage) %>% gsub("[_.-]+$", "", .),
-                StageGroup = factor(StageGroup, levels = unique_timepoints)
+                StageGroup <- factor(StageGroup, levels = unique_datapoints)
             )
 
         data_long
@@ -45,7 +45,7 @@ int_timeline_server <- function(input, output, session, data_combined, reference
             summarize(MeanExpression = mean(Expression, na.rm = TRUE), .groups = "drop")
     })
 
-    output$integration_timeline_plot <- shiny::renderPlot({
+    output$integration_dataline_plot <- shiny::renderPlot({
         long <- data_long()
         avg <- data_avg()
 
