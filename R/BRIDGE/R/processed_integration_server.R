@@ -21,9 +21,11 @@ processed_integration <- function(input, output, session, rv) {
 
         get_matrix_from_dep <- function(dep) {
             mat <- as.data.frame(SummarizedExperiment::assay(dep))
-            mat$names <- rownames(mat)
-            mat$Gene_Name <- gsub("_.*", "", mat$names, perl = TRUE)
-            mat$Gene_ID <- gsub(".*_", "", mat$names, perl = TRUE)
+            if (rv$datatype[[tbl]] == "rnaseq") {
+                mat$names <- rownames(mat)
+                mat$Gene_Name <- gsub("_.*", "", mat$names, perl = TRUE)
+                mat$Gene_ID <- gsub(".*_", "", mat$names, perl = TRUE)
+            }
             # rownames(mat) <- NULL
             return(mat)
         }
@@ -56,6 +58,9 @@ processed_integration <- function(input, output, session, rv) {
             original_dim <- dim(SummarizedExperiment::assay(dep))
             filtered_dim <- length(filtered_genes[[tbl]])
 
+            if ("XID" %in% colnames(df)) {
+                filtered_genes[[tbl]] <- unique(c(filtered_genes[[tbl]], str_split_1(df$XID[keep], pattern = ";")))
+            }
             dim_info[[tbl]] <- list(
                 original = original_dim,
                 filtered = c(filtered_dim, original_dim[2])
@@ -74,14 +79,14 @@ processed_integration <- function(input, output, session, rv) {
 
         # Subset SummarizedExperiment::assays by intersected gene names
         intersected_list <- lapply(selected_tables, function(tbl) {
-dep <- rv$dep_output[[tbl]]
+            dep <- rv$dep_output[[tbl]]
 
-res <- get_df_from_dep(dep)
-mat <- get_matrix_from_dep(dep)
-dep_flt <- res[res$Gene_Name %in% common_ids, ]
-mat_flt <- mat[mat$Gene_Name %in% common_ids, ]
+            res <- get_df_from_dep(dep)
+            mat <- get_matrix_from_dep(dep)
+            dep_flt <- res[res$Gene_Name %in% common_ids | res$XID %in% common_ids, ]
+            mat_flt <- mat[mat$Gene_Name %in% common_ids | mat$XID %in% common_ids, ]
 
-data <- cbind(mat_flt, dep_flt)
+            data <- cbind(mat_flt, dep_flt)
 
             # Generate unique IDs
             if ("pepG" %in% colnames(data)) {
