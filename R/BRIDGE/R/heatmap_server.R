@@ -602,12 +602,12 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 rownames(df_filtered) <- NULL
                 if (!is.null(cluster.all)) {
                     df_filtered <- df_filtered %>%
-                        select(Gene_ID, Gene_Name, Cluster, everything()) %>%
-                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                        dplyr::select(Gene_ID, Gene_Name, Cluster, everything()) %>%
+                            dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 } else {
                     df_filtered <- df_filtered %>%
-                        select(Gene_ID, Gene_Name, everything()) %>%
-                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                        dplyr::select(Gene_ID, Gene_Name, everything()) %>%
+                            dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 }
             }
             message("DF filtered: ", nrow(df_filtered), " rows")

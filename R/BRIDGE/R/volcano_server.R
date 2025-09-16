@@ -278,8 +278,8 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]
                rownames(df_filtered) <- NULL
                df_filtered <- df_filtered %>%
-                   select(Gene_ID, Gene_Name, name, everything()) %>%
-                   mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                   dplyr::select(Gene_ID, Gene_Name, name, everything()) %>%
+                       dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
            } else {
                rd <- SummarizedExperiment::rowData(dep_flt)
                sig_genes <- rd$Gene_Name[rd$significant]
@@ -287,7 +287,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                df_filtered$name <- rownames(df_filtered)
                rownames(df_filtered) <- NULL
                df_filtered <- df_filtered %>%
-                   select(Gene_ID, Gene_Name, name, everything()) %>%
+                   dplyr::select(Gene_ID, Gene_Name, name, everything()) %>%
                    mutate(Gene_Name = stringr::str_to_title(Gene_Name))
            }
 
