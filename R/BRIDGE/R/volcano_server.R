@@ -75,8 +75,8 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                 # message("DF_table: ", head(df_table, 3), "\ndpflt: ", str(SummarizedExperiment::colData(dep_flt)))
 
                 names <- switch(datatype,
-                    proteomics        = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Gene_ID),
-                    phosphoproteomics = paste0(df$Gene_Name, "_", df$pepG),
+                    proteomics        = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Protein_ID),
+                    phosphoproteomics = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Protein_ID, "_", df$pepG),
                     rnaseq            = rownames(df)
                 )
                 # message("NAMING: ", head(names))
@@ -268,11 +268,11 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                df$name <- rownames(df)
                df$Gene_ID <- gsub("^(.*)_", "", rownames(df))
                gene_map <- rv$tables[[tbl_name]][, c("Gene_ID", "Gene_Name")]
-               df <- dplyr::left_join(df, gene_map, by = "Gene_ID")
+               df <- dplyr::left_join(df, gene_map, by = "names")
 
                sig <- as.data.frame(dep_flt@test_result)
                sig$Gene_ID <- gsub("^(.*)_", "", rownames(dep_flt@test_result))
-               sig <- dplyr::left_join(sig, gene_map, by = "Gene_ID")
+               sig <- dplyr::left_join(sig, gene_map, by = "names")
                sig_genes <- sig$Gene_Name[sig$significant]
 
                df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]

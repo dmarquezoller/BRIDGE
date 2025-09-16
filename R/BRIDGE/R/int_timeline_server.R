@@ -1,5 +1,5 @@
 #' @export
-int_dataline_server <- function(input, output, session, data_combined, reference_data_names) {
+int_datapoints_server <- function(input, output, session, data_combined, reference_data_names) {
     processed_data <- reactive({
         shiny::req(input$scale_integration)
         scale_input <- input$scale_integration
@@ -45,7 +45,7 @@ int_dataline_server <- function(input, output, session, data_combined, reference
             summarize(MeanExpression = mean(Expression, na.rm = TRUE), .groups = "drop")
     })
 
-    output$integration_dataline_plot <- shiny::renderPlot({
+    output$integration_datapoints_plot <- shiny::renderPlot({
         long <- data_long()
         avg <- data_avg()
 

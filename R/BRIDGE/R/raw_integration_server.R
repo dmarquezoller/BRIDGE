@@ -65,7 +65,7 @@ raw_integration <- function(input, output, session, rv, combined_data) {
         # Update search box
         updateSelectizeInput(session, "search_gene_integration", choices = sort(unique(combined_df$unique_id)), server = TRUE)
 
-        # Render multi-dataline plot
-        int_dataline_server(input, output, session, combined_df, reference_data_names)
+        # Render multi-datapoints plot
+        int_datapoints_server(input, output, session, combined_df, reference_data_names)
     })
 }

@@ -1,5 +1,5 @@
 #' @export
-datalineServer <- function(id, rv, tbl_name) {
+datapointsServer <- function(id, rv, tbl_name) {
     moduleServer(id, function(input, output, session) {
         # --- gene choices for this table ---
         observe({
@@ -58,7 +58,8 @@ datalineServer <- function(id, rv, tbl_name) {
                 keep <- c("Gene_pepG", tp)
                 df <- df[, keep, drop = FALSE]
                 dl <- tidyr::pivot_longer(df, cols = -Gene_pepG, names_to = "Stage", values_to = "Expression")
-                dl$StageGroup <- factor(gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
+                dl$StageGroup <- factor(
+                    gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
                     levels <- unique_datapoints()
                 )
                 dl
@@ -68,7 +69,8 @@ datalineServer <- function(id, rv, tbl_name) {
                 keep <- c("Gene_Name", tp)
                 df <- df[, keep, drop = FALSE]
                 dl <- tidyr::pivot_longer(df, cols = -Gene_Name, names_to = "Stage", values_to = "Expression")
-                dl$StageGroup <- factor(gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
+                dl$StageGroup <- factor(
+                    gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
                     levels <- unique_datapoints()
                 )
                 dl

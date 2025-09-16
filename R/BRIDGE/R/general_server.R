@@ -276,8 +276,8 @@ server_function <- function(input, output, session, db_path) {
                     ),
                     tabPanel(
                         "Gene Expression",
-                        fluidRow(datalineUI(paste0("dataline_", tbl_name), tbl_name))
-                        # remove datalineTableUI if merged
+                        fluidRow(datapointsUI(paste0("datapoints_", tbl_name), tbl_name))
+                        # remove datapointsTableUI if merged
                     ),
                     tabPanel(
                         "Enrichment analysis",
@@ -305,12 +305,18 @@ server_function <- function(input, output, session, db_path) {
                 df_dep <- DEP2::get_results(dep_output) %>%
                     dplyr::rename(Gene_ID = ID) %>%
                     dplyr::mutate(
-                        Gene_ID = sub(".*_(ENSDARG[0-9]+)", "\\1", Gene_ID)
+                        Gene_ID <- sub(".*_(ENS.*G[0-9]+)", "\\1", Gene_ID)
                     )
                 complete <- dplyr::left_join(df_raw, df_dep, by = "Gene_ID")
+            } else if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
+                df_dep <- DEP2::get_results(dep_output)                
+                complete <- dplyr::left_join(df_raw %>% dplyr::mutate(
+                        ID = paste0(Protein_ID, "_", pepG)), df_dep, by = "ID") %>%
+                        dplyr::select(-c(ID, name))
             } else {
                 df_dep <- DEP2::get_results(dep_output) %>%
                     dplyr::rename(Protein_ID = ID)
+                message("DF_DEP: ", paste0(colnames(df_dep), collapse = ","), "ID: ", head(df_dep$Protein_ID, 3), " Gene_Name: ", head(df_dep$Gene_Name, 3))
                 complete <- dplyr::left_join(df_raw, df_dep, by = "Protein_ID")
             }
             output[[paste0("table_", tbl_name)]] <- DT::renderDT({
@@ -321,7 +327,7 @@ server_function <- function(input, output, session, db_path) {
 
     # RawHeatmapServer(paste0("RawHeatmap_", tbl_name), rv) #Function in heatmap_server.R
     wired <- reactiveValues(
-        dataline = character(),
+        datapoints = character(),
         raw      = character(),
         dep      = character(),
         pca      = character(),
@@ -337,9 +343,9 @@ server_function <- function(input, output, session, db_path) {
 
         for (tbl in tbls) {
             # Always-ok modules (need raw table + data cols)
-            if (!(tbl %in% wired$dataline) && !is.null(rv$tables[[tbl]]) && !is.null(rv$data_cols[[tbl]])) {
-                datalineServer(paste0("dataline_", tbl), rv, tbl)
-                wired$dataline <- union(wired$dataline, tbl)
+            if (!(tbl %in% wired$datapoints) && !is.null(rv$tables[[tbl]]) && !is.null(rv$data_cols[[tbl]])) {
+                datapointsServer(paste0("datapoints_", tbl), rv, tbl)
+                wired$datapoints <- union(wired$datapoints, tbl)
             }
             if (!(tbl %in% wired$raw) && !is.null(rv$tables[[tbl]])) {
                 RawHeatmapServer(paste0("RawHeatmap_", tbl), rv, tbl)
@@ -367,7 +373,7 @@ server_function <- function(input, output, session, db_path) {
 
     # Optional cleanup when a table is removed
     observeEvent(input$delete_data, {
-        wired$dataline <- setdiff(wired$dataline, input$remove)
+        wired$datapoints <- setdiff(wired$datapoints, input$remove)
         wired$raw <- setdiff(wired$raw, input$remove)
         wired$dep <- setdiff(wired$dep, input$remove)
         wired$pca <- setdiff(wired$pca, input$remove)

@@ -1,8 +1,8 @@
-datalineUI <- function(id, tbl_name) {
+datapointsUI <- function(id, tbl_name) {
     ns <- NS(id)
     tagList(
         shinydashboard::box(
-            title = "dataline", width = 12, solidHeader = TRUE, status = "info",
+            title = "datapoints", width = 12, solidHeader = TRUE, status = "info",
             fluidRow(
                 column(4, selectizeInput(ns("search_gene"), "Gene(s)", choices = NULL, multiple = TRUE)),
                 column(4, selectInput(ns("scale"), "Scale",
@@ -22,7 +22,7 @@ datalineUI <- function(id, tbl_name) {
 }
 
 #' @export
-datalineTableUI <- function(id, tbl_name) {
+datapointsTableUI <- function(id, tbl_name) {
     ns <- NS(id)
     shinydashboard::box(
         title = "Table Entries", width = 12, solidHeader = T, status = "info", style = "overflow-x: auto", collapsible = T, collapsed = F,

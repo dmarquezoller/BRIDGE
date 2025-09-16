@@ -36,7 +36,7 @@ integration_ui <- function(input, output, session, rv) {
                             DT::DTOutput("integration_combined_table")
                         ),
                         shinydashboard::box(
-                            title = "Integrated dataline Plot", width = 12, solidHeader = TRUE, status = "info",
+                            title = "Integrated datapoints Plot", width = 12, solidHeader = TRUE, status = "info",
                             selectizeInput(
                                 inputId = "search_gene_integration",
                                 label = "Search your gene of interest:",
@@ -49,7 +49,7 @@ integration_ui <- function(input, output, session, rv) {
                                 choices = c("Continous", "Log-scale"),
                                 selected = "Continous"
                             ),
-                            plotOutput("integration_dataline_plot")
+                            plotOutput("integration_datapoints_plot")
                         )
                     )
                 ),

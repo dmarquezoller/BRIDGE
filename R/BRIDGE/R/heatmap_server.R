@@ -227,8 +227,8 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     df_table <- df
 
                     names <- switch(datatype,
-                        proteomics        = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Gene_ID),
-                        phosphoproteomics = paste0(df$Gene_Name, "_", df$pepG),
+                        proteomics        = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Protein_ID),
+                        phosphoproteomics = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Protein_ID, "_", df$pepG),
                         rnaseq            = rownames(df)
                     )
                     df$names <- names
@@ -540,32 +540,32 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         })
 
         output$ht_sig <- DT::renderDT({
-            message("Fetching DEP result for sig table")
+            # message("Fetching DEP result for sig table")
             key <- rv$current_dep_heatmap_key[[tbl_name]]
             res <- req(get_dep_result())
-            message("Got DEP result for sig table")
+            # message("Got DEP result for sig table")
             params <- req(last_params())
             roword <- req(roword())
             if (!is.null(key) && !cache$exists(key)) cache$set(key, res)
-            message("Getting DEP flt result for sig table")
+            # message("Getting DEP flt result for sig table")
             dep_flt_list <- get_depflt(params)
             dep_flt <- dep_flt_list$dep_flt
-            message("Got DEP flt result for sig table")
+            # message("Got DEP flt result for sig table")
             cluster.all <- NULL
             if (!is.null(roword)) {
                 cluster.all <- list()
                 # loop to extract genes for each cluster.
                 for (i in 1:length(roword)) {
                     if (i == 1) {
-                        clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
+                        clu <- t(t(res$df[roword[[i]], ]$names))
                         cluster.all <- cbind(clu, paste("cluster", i, sep = ""))
                     } else {
-                        clu <- t(t(res$df[roword[[i]], ]$Gene_ID))
+                        clu <- t(t(res$df[roword[[i]], ]$names))
                         clu <- cbind(clu, paste("cluster", i, sep = ""))
                         cluster.all <- rbind(cluster.all, clu)
                     }
                 }
-                colnames(cluster.all) <- c("Gene_ID", "Cluster")
+                colnames(cluster.all) <- c("names", "Cluster")
                 cluster.all <- as.data.frame(cluster.all)
             }
 
@@ -574,7 +574,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             if (methods::is(dep_flt, "DEGdata")) {
                 df <- res$df
                 if (!is.null(cluster.all)) {
-                    df <- dplyr::left_join(df, cluster.all, by = "Gene_ID")
+                    df <- dplyr::left_join(df, cluster.all, by = "names")
                 }
                 sig <- as.data.frame(dep_flt@test_result)
                 sig$Gene_ID <- gsub("^.*_", "", rownames(sig))
@@ -597,17 +597,17 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 sig_genes <- rd$Gene_Name[rd$significant]
                 df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE] %>% dplyr::select(-ID)
                 if (!is.null(cluster.all)) {
-                    df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "Gene_ID")
+                    df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "names")
                 }
                 rownames(df_filtered) <- NULL
                 if (!is.null(cluster.all)) {
                     df_filtered <- df_filtered %>%
                         dplyr::select(Gene_ID, Gene_Name, Cluster, everything()) %>%
-                            dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                        dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 } else {
                     df_filtered <- df_filtered %>%
                         dplyr::select(Gene_ID, Gene_Name, everything()) %>%
-                            dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                        dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 }
             }
             message("DF filtered: ", nrow(df_filtered), " rows")
