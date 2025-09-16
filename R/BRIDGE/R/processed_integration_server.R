@@ -9,24 +9,24 @@ processed_integration <- function(input, output, session, rv) {
 
         get_df_from_dep <- function(dep) {
             # Extract the necessary columns from SummarizedExperiment::rowData
+            message("DF ROW: ", paste0(colnames(SummarizedExperiment::rowData(dep)), collapse = ", "), " DF COL: ", paste0(colnames(SummarizedExperiment::colData(dep)), collapse = ", "))
             res <- as.data.frame(SummarizedExperiment::rowData(dep))
             if (rv$datatype[[tbl]] == "rnaseq") {
                 res$names <- rownames(res)
                 res$Gene_Name <- gsub("_.*", "", res$names, perl = TRUE)
                 res$Gene_ID <- gsub(".*_", "", res$names, perl = TRUE)
             }
-            # rownames(res) <- NULL
+            res$XID <- as.data.frame(SummarizedExperiment::rowData(dep))$XID
             return(res)
         }
 
         get_matrix_from_dep <- function(dep) {
+            message("MAT ROW: ", paste0(colnames(SummarizedExperiment::rowData(dep)), collapse = ", "), " MAT COL: ", paste0(colnames(SummarizedExperiment::colData(dep)), collapse = ", "))
             mat <- as.data.frame(SummarizedExperiment::assay(dep))
-            if (rv$datatype[[tbl]] == "rnaseq") {
-                mat$names <- rownames(mat)
-                mat$Gene_Name <- gsub("_.*", "", mat$names, perl = TRUE)
-                mat$Gene_ID <- gsub(".*_", "", mat$names, perl = TRUE)
-            }
-            # rownames(mat) <- NULL
+            mat$names <- rownames(mat)
+            mat$Gene_Name <- gsub("_.*", "", mat$names, perl = TRUE)
+            mat$Gene_ID <- gsub(".*_", "", mat$names, perl = TRUE)
+            mat$XID <- as.data.frame(SummarizedExperiment::rowData(dep))$XID
             return(mat)
         }
 
