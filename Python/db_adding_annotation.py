@@ -1,3 +1,5 @@
+import argparse
+import gzip
 import os
 import sqlite3
 
@@ -17,12 +19,12 @@ import pandas as pd
 #   3. The names of the columns have to be          #
 #      the precise ones above.                      #
 #   4. You can download this annotation table       #
-#      with these columns in BioMart (ENSEMBL).     #          #
+#      with these columns in BioMart (ENSEMBL).     #
 #   5. The name of the annotation table uploaded    #
 #      has to follow the strict rule:               #
-#      <species>_annotation_<version>                #
+#      <species>_annotation_<version>               #
 #      i.e. zebrafish_annotation_GRCz11             #
-#   6. The name of the species has to be exactly     #
+#   6. The name of the species has to be exactly    #
 #      the same as the one used for the data        #
 #      table.                                       #
 #   7. Thanks to the versioning of the annotation   #
@@ -37,14 +39,26 @@ import pandas as pd
 #####################################################
 
 
-def load_csv_with_validation():
-    file_path = input("Enter the path to the annotation CSV file: ").strip()
+def load_csv_with_validation(file_path=None):
+    if not file_path:
+        file_path = input("Enter the path to the annotation CSV file: ").strip()
     if not os.path.exists(file_path):
         print("File does not exist.")
         return None, None
 
     try:
-        df = pd.read_csv(file_path)
+        open_func = gzip.open if file_path.endswith(".gz") else open
+        with open_func(file_path, "rt") as f:
+            first_line = f.readline()
+            if "\t" in first_line:
+                sep = "\t"
+            else:
+                sep = ","
+        df = pd.read_csv(
+            file_path,
+            sep=sep,
+            compression="gzip" if file_path.endswith(".gz") else None,
+        )
         print(
             f"Annotation CSV loaded with {df.shape[0]} rows and {df.shape[1]} columns."
         )
@@ -65,20 +79,38 @@ def upload_dataframe_to_sql(df, conn, table_name):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Add an annotation table to the BRIDGE database."
+    )
+    parser.add_argument(
+        "--csv", help="Path to the annotation CSV/TSV file (can be .gz)"
+    )
+    parser.add_argument("--db", help="Path to the SQLite database")
+    parser.add_argument("--table", help="Name for the annotation table in the database")
+    args = parser.parse_args()
+
     print("=== Annotation Upload Script ===")
 
     # === Load annotation CSV ===
-    df, file_path = load_csv_with_validation()
+    if args.csv:
+        df, file_path = load_csv_with_validation(args.csv)
+    else:
+        df, file_path = load_csv_with_validation()
     if df is None:
         return
 
     # === Ask for table name ===
-    print("Remember to follow the naming rules: <specie>_annotation_<version>." \
-    "For example 'zebrafish_annotation_GRCz11115'." \
-    "For further rules, refer to the README.")
-    table_name = input(
-        "Enter a name for the annotation table in the database: "
-    ).strip()
+    if args.table:
+        table_name = args.table.strip()
+    else:
+        print(
+            "Remember to follow the naming rules: <species>_annotation_<version>."
+            "For example 'zebrafish_annotation_GRCz11'."
+            "For further rules, refer to the README."
+        )
+        table_name = input(
+            "Enter a name for the annotation table in the database: "
+        ).strip()
     if not table_name.isidentifier():
         print(
             "Invalid table name (must be alphanumeric with no spaces or symbols except underscores)."
@@ -86,7 +118,10 @@ def main():
         return
 
     # === Connect to database ===
-    db_path = input("\nEnter path to the database: ").strip()
+    if args.db:
+        db_path = args.db
+    else:
+        db_path = input("\nEnter path to the database: ").strip()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 

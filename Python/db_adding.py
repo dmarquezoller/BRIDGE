@@ -1,3 +1,5 @@
+import argparse
+import gzip
 import os
 import sqlite3
 
@@ -56,7 +58,7 @@ def prompt_column_selection(df, prompt_text):
     print(f"\n{prompt_text}")
     print("Available columns:")
     for idx, col in enumerate(df.columns):
-        print(f"{idx}: {col}")
+        print(f"{idx+1}: {col}")
     indices = input(
         f"Enter {prompt_text} numbers separated by commas or ranges using ':'. (e.g. 1,2,3,5:10): "
     )
@@ -68,51 +70,103 @@ def prompt_column_selection(df, prompt_text):
             start, end = part.split(":")
             if start.strip().isdigit() and end.strip().isdigit():
                 selected.extend(
-                    df.columns[int(i)] for i in range(int(start), int(end) + 1)
+                    df.columns[int(i) - 1] for i in range(int(start), int(end) + 1)
                 )
         elif part.isdigit():
-            selected.append(df.columns[int(part)])
+            selected.append(df.columns[int(part) - 1])
 
     return selected
 
 
 def main():
-    # === Step 1: Input CSV path ===
-    csv_path = input("Enter path to the CSV file: ").strip()
+    parser = argparse.ArgumentParser(description="Add a table to the BRIDGE database.")
+    parser.add_argument("--csv", help="Path to the CSV/TSV file (can be .gz)")
+    parser.add_argument("--db", help="Path to the SQLite database")
+    parser.add_argument("--table", help="Name for the new table in the database")
+    parser.add_argument(
+        "--id-cols", help="Comma-separated indices for identifier columns (e.g. 0,1,2)"
+    )
+    parser.add_argument(
+        "--tp-cols", help="Comma-separated indices for timepoint columns (e.g. 3,4,5)"
+    )
+    parser.add_argument(
+        "--processed", action="store_true", help="Add processed data for the raw table"
+    )
+    parser.add_argument(
+        "--rds", help="Path to the RDS file containing the processed R object"
+    )
+    args = parser.parse_args()
+
+    if args.csv:
+        csv_path = args.csv
+    else:
+        csv_path = input("Enter path to the CSV file: ").strip()
     if not os.path.exists(csv_path):
         print("File does not exist.")
         return
 
-    # === Step 2: Read CSV ===
-    # Auto-detect delimiter (comma or tab)
-    with open(csv_path, "r") as f:
+    open_func = gzip.open if csv_path.endswith(".gz") else open
+    with open_func(csv_path, "rt") as f:
         first_line = f.readline()
         if "\t" in first_line:
             sep = "\t"
         else:
             sep = ","
-    df = pd.read_csv(csv_path, sep=sep)
+    df = pd.read_csv(
+        csv_path, sep=sep, compression="gzip" if csv_path.endswith(".gz") else None
+    )
     print(f"CSV loaded with {df.shape[0]} rows and {df.shape[1]} columns.")
 
-    # === Step 3: Ask user to select identifier and timepoint columns ===
-    id_cols = prompt_column_selection(df, "identifier columns")
-    tp_cols = prompt_column_selection(df, "timepoint columns")
+    if args.id_cols:
+        id_cols = []
+        for part in args.id_cols.split(","):
+            part = part.strip()
+            if ":" in part:
+                start, end = part.split(":")
+                if start.strip().isdigit() and end.strip().isdigit():
+                    id_cols.extend(
+                        df.columns[int(i) - 1] for i in range(int(start), int(end) + 1)
+                    )
+            elif part.isdigit():
+                id_cols.append(df.columns[int(part) - 1])
+    else:
+        id_cols = prompt_column_selection(df, "identifier columns")
 
-    # === Step 4: Ask for table name ===
-    print("Remember to follow the naming rules: <specie>_<datatype>_<free identifier>_<replicate>." \
-    "For example 'zebrafish_proteomics_test_1'." \
-    "For further rules, refer to the README.")
-    table_name = input("\nEnter a name for the new table in the database: ").strip()
+    if args.tp_cols:
+        tp_cols = []
+        for part in args.tp_cols.split(","):
+            part = part.strip()
+            if ":" in part:
+                start, end = part.split(":")
+                if start.strip().isdigit() and end.strip().isdigit():
+                    tp_cols.extend(
+                        df.columns[int(i) - 1] for i in range(int(start), int(end) + 1)
+                    )
+            elif part.isdigit():
+                tp_cols.append(df.columns[int(part) - 1])
+    else:
+        tp_cols = prompt_column_selection(df, "timepoint columns")
+
+    if args.table:
+        table_name = args.table.strip()
+    else:
+        print(
+            "Remember to follow the naming rules: <specie>_<datatype>_<free identifier>_<replicate>."
+            "For example 'zebrafish_proteomics_test_1'."
+            "For further rules, refer to the README."
+        )
+        table_name = input("\nEnter a name for the new table in the database: ").strip()
     if not table_name.isidentifier():
         print("Invalid table name.")
         return
 
-    # === Step 5: Connect to SQLite ===
-    db_path = input("\nEnter path to the database: ").strip()
+    if args.db:
+        db_path = args.db
+    else:
+        db_path = input("\nEnter path to the database: ").strip()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # === Step 6: Upload table ===
     try:
         df.to_sql(table_name, conn, if_exists="replace", index=False)
         print(f"Table '{table_name}' uploaded to the database.")
@@ -121,7 +175,6 @@ def main():
         conn.close()
         return
 
-    # === Step 7: Insert metadata ===
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS table_metadata (
             table_name TEXT PRIMARY KEY,
@@ -130,7 +183,6 @@ def main():
         )
     """)
 
-    # Convert column lists to comma-separated strings
     id_str = ",".join(id_cols)
     tp_str = ",".join(tp_cols)
 
@@ -145,16 +197,23 @@ def main():
     print("Metadata added to 'table_metadata'.")
 
     # === Step 8: Prompt addition of processed data ===
-    processed = (
-        input("\nDo you want to add processed data for the raw table? (y/n): ")
-        .strip()
-        .lower()
-    )
-    if processed == "y":
+    add_processed = args.processed
+    if not add_processed:
+        processed = (
+            input("\nDo you want to add processed data for the raw table? (y/n): ")
+            .strip()
+            .lower()
+        )
+        add_processed = processed == "y"
+
+    if add_processed:
         key = f'{table_name}_{"_".join(tp_cols)}_dep'
-        rds_path = input(
-            "Enter the path to the RDS file containing the processed R object: "
-        ).strip()
+        if args.rds:
+            rds_path = args.rds.strip()
+        else:
+            rds_path = input(
+                "Enter the path to the RDS file containing the processed R object: "
+            ).strip()
         if not os.path.exists(rds_path):
             print("RDS file does not exist.")
         else:
