@@ -198,13 +198,6 @@ def main():
 
     # === Step 8: Prompt addition of processed data ===
     add_processed = args.processed
-    if not add_processed:
-        processed = (
-            input("\nDo you want to add processed data for the raw table? (y/n): ")
-            .strip()
-            .lower()
-        )
-        add_processed = processed == "y"
 
     if add_processed:
         key = f'{table_name}_{"_".join(tp_cols)}_dep'
