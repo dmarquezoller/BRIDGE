@@ -15,7 +15,7 @@ int_datapoints_server <- function(input, output, session, data_combined, referen
         shiny::req(input$search_gene_integration)
         gene <- stringr::str_to_lower(trimws(input$search_gene_integration))
         data <- processed_data()
-        data <- subset(data, stringr::str_to_lower(Gene_Name) %in% gene)
+        data <- subset(data, stringr::str_to_lower(Gene_Name) %in% gene | stringr::str_to_lower(gsub("_.*", "", Gene_Name)) %in% gene)
         validate(need(nrow(data) > 0, "No data found for the entered gene(s)"))
         data
     })

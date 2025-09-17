@@ -142,6 +142,7 @@ int_heatmap_server <- function(input, output, session, rv) {
                         cluster_columns = FALSE,
                         show_row_dend = FALSE,
                         show_column_dend = TRUE,
+                        show_row_names = FALSE,
                         row_split = cluster_vec,
                         row_names_gp = ggfun::gpar(fontsize = 6),
                         column_names_gp = ggfun::gpar(fontsize = 8),

@@ -316,7 +316,7 @@ server_function <- function(input, output, session, db_path) {
             } else {
                 df_dep <- DEP2::get_results(dep_output) %>%
                     dplyr::rename(Protein_ID = ID)
-                message("DF_DEP: ", paste0(colnames(df_dep), collapse = ","), "ID: ", head(df_dep$Protein_ID, 3), " Gene_Name: ", head(df_dep$Gene_Name, 3))
+                # message("DF_DEP: ", paste0(colnames(df_dep), collapse = ","), "ID: ", head(df_dep$Protein_ID, 3), " Gene_Name: ", head(df_dep$Gene_Name, 3))
                 complete <- dplyr::left_join(df_raw, df_dep, by = "Protein_ID")
             }
             output[[paste0("table_", tbl_name)]] <- DT::renderDT({

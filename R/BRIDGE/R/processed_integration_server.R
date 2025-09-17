@@ -9,24 +9,31 @@ processed_integration <- function(input, output, session, rv) {
 
         get_df_from_dep <- function(dep) {
             # Extract the necessary columns from SummarizedExperiment::rowData
-            message("DF ROW: ", paste0(colnames(SummarizedExperiment::rowData(dep)), collapse = ", "), " DF COL: ", paste0(colnames(SummarizedExperiment::colData(dep)), collapse = ", "))
+            # message("DF ROW: ", paste0(colnames(SummarizedExperiment::rowData(dep)), collapse = ", "), "\nDF COL: ", paste0(colnames(SummarizedExperiment::colData(dep)), collapse = ", "))
             res <- as.data.frame(SummarizedExperiment::rowData(dep))
             if (rv$datatype[[tbl]] == "rnaseq") {
                 res$names <- rownames(res)
                 res$Gene_Name <- gsub("_.*", "", res$names, perl = TRUE)
                 res$Gene_ID <- gsub(".*_", "", res$names, perl = TRUE)
             }
-            res$XID <- as.data.frame(SummarizedExperiment::rowData(dep))$XID
+            #res$XID <- as.data.frame(SummarizedExperiment::rowData(dep))$XID
             return(res)
         }
 
         get_matrix_from_dep <- function(dep) {
-            message("MAT ROW: ", paste0(colnames(SummarizedExperiment::rowData(dep)), collapse = ", "), " MAT COL: ", paste0(colnames(SummarizedExperiment::colData(dep)), collapse = ", "))
+            # message("MAT ROW: ", paste0(colnames(SummarizedExperiment::rowData(dep)), collapse = ", "), " MAT COL: ", paste0(colnames(SummarizedExperiment::colData(dep)), collapse = ", "))
             mat <- as.data.frame(SummarizedExperiment::assay(dep))
             mat$names <- rownames(mat)
-            mat$Gene_Name <- gsub("_.*", "", mat$names, perl = TRUE)
-            mat$Gene_ID <- gsub(".*_", "", mat$names, perl = TRUE)
-            mat$XID <- as.data.frame(SummarizedExperiment::rowData(dep))$XID
+            df <- as.data.frame(SummarizedExperiment::rowData(dep))
+            mat$Gene_Name <- df$Gene_Name  # gsub("_.*", "", mat$names, perl = TRUE)
+            mat$Gene_ID <- df$Gene_ID  # gsub(".*_", "", mat$names, perl = TRUE)
+            if("pepG" %in% colnames(df)) {
+                mat$pepG <- df$pepG
+            }
+            if("Protein_ID" %in% colnames(df)) {
+                mat$Protein_ID <- df$Protein_ID
+            }
+            mat$XID <- df$XID
             return(mat)
         }
 
@@ -86,11 +93,14 @@ processed_integration <- function(input, output, session, rv) {
             dep_flt <- res[res$Gene_Name %in% common_ids | res$XID %in% common_ids, ]
             mat_flt <- mat[mat$Gene_Name %in% common_ids | mat$XID %in% common_ids, ]
 
-            data <- cbind(mat_flt, dep_flt)
+            data <- dplyr::inner_join(mat_flt, dep_flt, by = "Gene_Name", keep=FALSE, suffix=c("",".y")) %>%
+                select(-ends_with(".y"))
 
             # Generate unique IDs
             if ("pepG" %in% colnames(data)) {
                 data$unique_id <- paste(data$Gene_Name, data$pepG, sep = "_")
+            } else if ("Protein_ID" %in% colnames(data)) {
+                data$unique_id <- paste(data$Gene_Name, data$Protein_ID, sep = "_")
             } else {
                 data$unique_id <- data$Gene_Name
             }            
@@ -105,13 +115,17 @@ processed_integration <- function(input, output, session, rv) {
 
             mat <- get_matrix_from_dep(dep)
             data <- mat[mat$Gene_Name %in% common_ids, ]
+            # message("COLS: ", paste0(colnames(data), collapse = ", "), "\n")
             # Generate unique IDs
             if ("pepG" %in% colnames(data)) {
                 data$unique_id <- paste(data$Gene_Name, data$pepG, sep = "_")
+            } else if ("Protein_ID" %in% colnames(data)) {
+                data$unique_id <- paste(data$Gene_Name, data$Protein_ID, sep = "_")
             } else {
                 data$unique_id <- data$Gene_Name
             }
             rownames(data) <- NULL
+            # message("UNIQUE IDS: ", paste0(head(data$unique_id, 5), collapse = ", "), "...\n")
             data <- data %>%
                 column_to_rownames("unique_id") %>%
                 dplyr::select(where(is.numeric))

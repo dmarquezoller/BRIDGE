@@ -1,5 +1,5 @@
 #' @export
-dep2_proteomics <- function(df, tbl_name, rv) {
+dep2_proteomics <- function(df, tbl_name, rv) {    
     unique_pg <- DEP2::make_unique(df, names = "Gene_Name", ids = "Protein_ID", delim = ";")
     ecols <- match(trimws(rv$data_cols[[tbl_name]]), colnames(unique_pg))
     se_pg <- DEP2::make_se_parse(unique_pg, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
@@ -14,8 +14,8 @@ dep2_proteomics <- function(df, tbl_name, rv) {
 #' @export
 dep2_phosphoproteomics <- function(df, tbl_name, rv) {
     # df <- df[!grepl("p0", df$pepG), ] # Remove the p0   NOT RECOMMENDED!
-    df <- df |> mutate(UID = paste0(Protein_ID, "_", pepG))
-    unique_phos <- DEP2::make_unique(df, names = "pepG", ids = "UID", delim = ";")
+    df <- df %>% mutate(UID = paste0(Protein_ID, "_", pepG))
+    unique_phos <- DEP2::make_unique(df, names = "UID", ids = "UID", delim = ";")
     ecols <- match(trimws(rv$data_cols[[tbl_name]]), colnames(unique_phos))
     se_phos <- DEP2::make_se_parse(unique_phos, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
     filter_phos <- DEP2::filter_se(se_phos)

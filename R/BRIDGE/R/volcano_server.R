@@ -210,7 +210,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                 showNotification("No finite points to plot for this contrast.", type = "warning")
                 return(plotly::plot_ly())
             }
-            message("highlight: ", paste(highlight, collapse = ", "))
+            # message("highlight: ", paste(highlight, collapse = ", "))
             # Use lab = df$name for all, and selectLab = highlights to force labels
 
             keyvals <- ifelse(
@@ -254,9 +254,8 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
 
         output$volcano_sig_table <- DT::renderDT({
            params <- req(last_params())
-           res <- get_dep_result()
+           res <- req(get_dep_result())
            req(res)
-           dep_flt <- get_depflt(params)
            # message("Filtered DEGs: ", class(dep_flt))
 
            key <- rv$current_dep_volcano_key[[tbl_name]]
@@ -272,10 +271,11 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
 
                sig <- as.data.frame(dep_flt@test_result)
                sig$Gene_ID <- gsub("^(.*)_", "", rownames(dep_flt@test_result))
+               sig$Gene_Name <- gsub("_.*$", "", rownames(sig))
                sig <- dplyr::left_join(sig, gene_map, by = "names")
                sig_genes <- sig$Gene_Name[sig$significant]
 
-               df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]
+               df_filtered <- df[stringr::str_to_lower(df$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE]
                rownames(df_filtered) <- NULL
                df_filtered <- df_filtered %>%
                    dplyr::select(Gene_ID, Gene_Name, name, everything()) %>%
@@ -283,7 +283,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
            } else {
                rd <- SummarizedExperiment::rowData(dep_flt)
                sig_genes <- rd$Gene_Name[rd$significant]
-               df_filtered <- res$table[res$table$Gene_Name %in% sig_genes, , drop = FALSE] %>% dplyr::select(-ID)
+               df_filtered <- res$table[stringr::str_to_lower(res$table$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE] %>% dplyr::select(-ID)
                df_filtered$name <- rownames(df_filtered)
                rownames(df_filtered) <- NULL
                df_filtered <- df_filtered %>%

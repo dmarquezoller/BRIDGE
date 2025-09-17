@@ -237,7 +237,9 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                         df$Gene_ID <- gsub(".*_", "", df$name, perl = TRUE)
                     }
                     df <- df %>% dplyr::select(Gene_ID, Gene_Name, names, dplyr::everything())
+                    #message("BEF: ", nrow(df), "\nhead: ", head(df))
                     df <- stats::na.omit(df)
+                    #message("AFT: ", nrow(df))
                     list(optimal_k = optimal_k, df = df, table = df_table, datatype = datatype)
                 },
                 seed = TRUE
@@ -410,7 +412,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     local_mat,
                     row_km = k,
                     show_row_names = FALSE,
-                    cluster_columns = TRUE
+                    cluster_columns = FALSE
                 ) + ComplexHeatmap::rowAnnotation(
                     profile = ComplexHeatmap::anno_empty(which = "row", width = grid::unit(55, "mm"), height = grid::unit(30, "mm")),
                     annotation_name_gp = grid::gpar(col = NA)
@@ -418,7 +420,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
             } else {
                 ht <- ComplexHeatmap::Heatmap(
                     local_mat,
-                    cluster_rows = FALSE, show_row_names = FALSE, cluster_columns = TRUE
+                    cluster_rows = FALSE, show_row_names = FALSE, cluster_columns = FALSE
                 )
             }
 
@@ -568,11 +570,11 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 colnames(cluster.all) <- c("names", "Cluster")
                 cluster.all <- as.data.frame(cluster.all)
             }
-
-            dep_flt_list <- get_depflt(params)
-            dep_flt <- dep_flt_list$dep_flt
+            
+            df <- res$df
+            # message("DF: ", str(res$df))        
             if (methods::is(dep_flt, "DEGdata")) {
-                df <- res$df
+                
                 if (!is.null(cluster.all)) {
                     df <- dplyr::left_join(df, cluster.all, by = "names")
                 }
@@ -584,33 +586,33 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 rownames(df_filtered) <- NULL
                 if (!is.null(cluster.all)) {
                     df_filtered <- df_filtered %>%
-                        select(Gene_ID, Gene_Name, Cluster, everything()) %>%
+                        select(Gene_ID, Gene_Name, name, Cluster, everything()) %>%
                         mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 } else {
                     df_filtered <- df_filtered %>%
-                        select(Gene_ID, Gene_Name, everything()) %>%
+                        select(Gene_ID, Gene_Name, name, everything()) %>%
                         mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 }
             } else {
-                # message("IS not DEGdata", str(dep_flt))
                 rd <- SummarizedExperiment::rowData(dep_flt)
+            
                 sig_genes <- rd$Gene_Name[rd$significant]
-                df_filtered <- res$df[res$df$Gene_Name %in% sig_genes, , drop = FALSE] %>% dplyr::select(-ID)
+                df_filtered <- res$df[stringr::str_to_lower(res$df$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE] %>% dplyr::select(-ID)
                 if (!is.null(cluster.all)) {
                     df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "names")
                 }
                 rownames(df_filtered) <- NULL
                 if (!is.null(cluster.all)) {
                     df_filtered <- df_filtered %>%
-                        dplyr::select(Gene_ID, Gene_Name, Cluster, everything()) %>%
+                        dplyr::select(Gene_ID, Gene_Name, name, Cluster, everything()) %>%
                         dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 } else {
                     df_filtered <- df_filtered %>%
-                        dplyr::select(Gene_ID, Gene_Name, everything()) %>%
+                        dplyr::select(Gene_ID, Gene_Name, name, everything()) %>%
                         dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 }
             }
-            message("DF filtered: ", nrow(df_filtered), " rows")
+            # message("DF filtered: ", nrow(df_filtered), " rows")
             DT::datatable(df_filtered,
                 extensions = "Buttons",
                 options = list(

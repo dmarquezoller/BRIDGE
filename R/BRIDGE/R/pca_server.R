@@ -64,15 +64,6 @@ pcaServer <- function(id, rv, tbl_name) {
                     mutate(contribution = (loading^2) / sum(loading^2)) %>%
                     ungroup()
 
-                # Top 50 genes (by |loading|) for PC1:
-                # top_pc1 <- loadings_df |>
-                #    filter(PC == "PC1") |>
-                #    slice_max(abs_loading, n = 10)
-                #
-                # top_pc2 <- loadings_df |>
-                #    filter(PC == "PC2") |>
-                #    slice_max(abs_loading, n = 10)
-
                 top_contrib <- contrib %>%
                     filter(PC == "PC1" | PC == "PC2") %>%
                     arrange(desc(contribution))

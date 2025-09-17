@@ -18,9 +18,6 @@ raw_integration <- function(input, output, session, rv, combined_data) {
             return()
         }
 
-        # Determine if phospho integration pipeline is needed
-        use_phospho_pipeline <- "phosphoproteomics" %in% selected_types
-
         reference_data_names <- selected_lists[[1]]
         tables_to_join <- list()
 
@@ -29,12 +26,11 @@ raw_integration <- function(input, output, session, rv, combined_data) {
             selected_data_cols <- selected_lists[[i]]
             df <- rv$tables[[tbl]][, c(rv$id_cols[[tbl]], selected_data_cols), drop = FALSE]
 
-            # Determine if phospho
-            is_phospho <- rv$datatype[[tbl]] == "phosphoproteomics"
-
             # Construct ID column
-            if (is_phospho && all(c("Gene_Name", "pepG") %in% names(df))) {
+            if (rv$datatype[[tbl]] == "phosphoproteomics" && all(c("Gene_Name", "pepG") %in% names(df))) {
                 df$unique_id <- paste(df$Gene_Name, df$pepG, sep = "_")
+            } else if (rv$datatype[[tbl]] == "proteomics" && all(c("Gene_Name", "Gene_ID") %in% names(df))) {
+                df$unique_id <- paste(df$Gene_Name, df$Gene_ID, sep = "_")
             } else {
                 df$unique_id <- df$Gene_Name
             }
@@ -63,7 +59,7 @@ raw_integration <- function(input, output, session, rv, combined_data) {
         combined_data(combined_df)
 
         # Update search box
-        updateSelectizeInput(session, "search_gene_integration", choices = sort(unique(combined_df$unique_id)), server = TRUE)
+        updateSelectizeInput(session, "search_gene_integration", choices = sort(unique(gsub("_.*", "", combined_df$unique_id))), server = TRUE)
 
         # Render multi-datapoints plot
         int_datapoints_server(input, output, session, combined_df, reference_data_names)
