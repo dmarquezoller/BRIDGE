@@ -179,10 +179,10 @@ server_function <- function(input, output, session, db_path) {
         # Recompute heatmap if the button is clicked
 
         if (cache$exists(cache_key)) {
-            message("Loading DEP output from cache: ", cache_key)
+            # message("Loading DEP output from cache: ", cache_key)
             dep_output <- cache$get(cache_key)
         } else {
-            message("Computing and caching DEP output: ", cache_key)
+            # message("Computing and caching DEP output: ", cache_key)
             if (rv$datatype[[table_id]] == "proteomics") {
                 dep_output <- dep2_proteomics(rv$tables[[table_id]], table_id, rv)
             } else if (rv$datatype[[table_id]] == "phosphoproteomics") {
