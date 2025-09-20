@@ -72,7 +72,7 @@ EnrichmentServer <- function(id, rv, tbl_name) {
                 }
                 dep_output <- strip_sig(dep_output) # Remove old sig cols if present
                 # Sig filtering used in your original code before ORA
-                dep_pg <- DEP2::add_rejections(dep_output, alpha = 0.05, lfc = 2)
+                dep_pg <- DEP2::add_rejections(dep_output, alpha = input$enrichment_pcutoff, lfc = input$enrichment_fccutoff)
                 sig_count <- check_sig(dep_pg)
                 if (sig_count < 10) {                
                     output$enrichment <- renderUI({
