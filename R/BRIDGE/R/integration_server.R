@@ -206,7 +206,7 @@ integration_ui <- function(input, output, session, rv) {
                 output_id <- paste0("processed_tbl_", table_name)
                 data <- rv$intersected_tables_processed[[table_name]]
                 output[[output_id]] <- DT::renderDT({
-                    DT::datatable(data, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 5, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
+                    DT::datatable(data %>% dplyr::select(where(~ !is.numeric(.)), where(is.numeric)), extensions = "Buttons", filter = "top", options = list(scrollX = TRUE, pageLength = 5, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
                 })
             })
         })
@@ -297,6 +297,7 @@ integration_ui <- function(input, output, session, rv) {
             return(
                 DT::datatable(
                     data.frame(Message = "Click Integrate button to see the Integrated Table"),
+                    filter = "top",
                     options = list(
                         dom = "t",
                         ordering = FALSE,
@@ -308,6 +309,6 @@ integration_ui <- function(input, output, session, rv) {
             )
         }
 
-        DT::datatable(combined_data(), extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
+        DT::datatable(combined_data() %>% dplyr::select(where(~ !is.numeric(.)), where(is.numeric)), extensions = "Buttons", filter = "top", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
     })
 }

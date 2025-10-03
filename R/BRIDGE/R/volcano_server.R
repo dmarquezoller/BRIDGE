@@ -291,8 +291,9 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                    mutate(Gene_Name = stringr::str_to_title(Gene_Name))
            }
 
-           DT::datatable(df_filtered,
+           DT::datatable(df_filtered %>% dplyr::select(where(~!is.numeric(.)), where(is.numeric)),
                extensions = "Buttons",
+               filter = "top",
                options = list(
                    scrollX = TRUE, pageLength = 10,
                    dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")

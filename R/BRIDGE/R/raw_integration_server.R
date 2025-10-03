@@ -55,7 +55,7 @@ raw_integration <- function(input, output, session, rv, combined_data) {
         }
 
         # Combine all
-        combined_df <- dplyr::bind_rows(tables_to_join)
+        combined_df <- dplyr::bind_rows(tables_to_join) %>% dplyr::select(where(~ !is.numeric(.)), where(is.numeric))
         combined_data(combined_df)
 
         # Update search box

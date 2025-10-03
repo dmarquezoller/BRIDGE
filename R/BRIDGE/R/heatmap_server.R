@@ -81,7 +81,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         last_mat <- reactiveVal(NULL)
         roword <- reactiveVal(NULL)
         ns <- session$ns
-        ich_id <- "dep_ht"
+        # ich_id <- "dep_ht"
 
         # InteractiveComplexHeatmapAction click
         click_action <- function(df, output) {
@@ -672,9 +672,8 @@ if (is.null(local_mat) || nrow(local_mat) == 0L || ncol(local_mat) == 0L) {
                 }
             } else {
                 rd <- SummarizedExperiment::rowData(dep_flt)
-            
                 sig_genes <- rd$Gene_Name[rd$significant]
-                df_filtered <- res$df[stringr::str_to_lower(res$df$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE] %>% dplyr::select(-ID)
+                df_filtered <- df[stringr::str_to_lower(res$df$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE] %>% dplyr::select(-ID)
                 if (!is.null(cluster.all)) {
                     df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "name")
                 }
