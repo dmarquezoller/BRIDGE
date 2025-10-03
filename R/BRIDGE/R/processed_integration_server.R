@@ -89,6 +89,7 @@ processed_integration <- function(input, output, session, rv) {
             if (is.null(sig) || nrow(sig) == 0L) {
                 return(list(mat = NULL, mat_scaled = NULL))
             }
+            # FIX HERE FOR RNASEQ
             mat <- as.data.frame(SummarizedExperiment::assay(sig))
             df <- cbind(as.data.frame(SummarizedExperiment::rowData(sig)), mat)            
             mat <- mat[which(df$Gene_ID %in% cids), , drop = FALSE]
@@ -109,6 +110,7 @@ processed_integration <- function(input, output, session, rv) {
         }
 
         get_df_from_dep <- function(dep) {            
+            # FIX HERE FOR RNASEQ
             res <- as.data.frame(SummarizedExperiment::rowData(dep))
             if (rv$datatype[[tbl]] == "rnaseq") {
                 res$names <- rownames(res)
@@ -119,7 +121,8 @@ processed_integration <- function(input, output, session, rv) {
             return(res)
         }
 
-        get_matrix_from_dep <- function(dep) {            
+        get_matrix_from_dep <- function(dep) {    
+            # FIX HERE FOR RNASEQ        
             mat <- as.data.frame(SummarizedExperiment::assay(dep))
             #mat$names <- rownames(mat)
             df <- as.data.frame(SummarizedExperiment::rowData(dep))
