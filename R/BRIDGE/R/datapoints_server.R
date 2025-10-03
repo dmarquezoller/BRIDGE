@@ -86,8 +86,9 @@ datapointsServer <- function(id, rv, tbl_name) {
             } else {
                 keep <- c("Gene_Name", tp)
             }
-            DT::datatable(df[, keep, drop = FALSE],
+            DT::datatable(df[, keep, drop = FALSE] %>% dplyr::select(where(~!is.numeric(.)), where(is.numeric)),
                 extensions = "Buttons",
+                filter = "top",
                 options = list(
                     scrollX = TRUE, pageLength = 10,
                     dom = "Bfrtip",

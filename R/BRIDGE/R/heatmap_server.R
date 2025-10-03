@@ -1,6 +1,6 @@
 #' @export
 heatmap_server <- function(id, rv) {
-    moduleServer(id, function(input, output, session) {
+    moduleServer(id, function(input, output, session) {        
         shiny::observe({
             lapply(rv$table_names, function(tbl_name) {
                 output[[paste0("raw_ht_", tbl_name)]] <- shiny::renderPlot({
@@ -167,15 +167,25 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
         get_depflt_matrix <- function(dep_obj) {
             # message("Getting DEP filtered matrix")
             sig <- DEP2::get_signicant(dep_obj) # only significant rows
+            # If there are no significant rows, or the object is empty, exit early
+            if (is.null(sig) || nrow(sig) == 0L) {
+                last_mat(NULL)
+                return(list(mat = NULL, mat_scaled = NULL))
+            }
             sig <- SummarizedExperiment::assay(sig)
+            # If assay is NULL or empty, exit early
             mat <- as.matrix(sig)
-            # message("MAT:", head(mat))
+            if (is.null(mat) || length(mat) == 0L) {
+                last_mat(NULL)
+                return(list(mat = NULL, mat_scaled = NULL))
+            }
+            # message("MAT:", head(mat, n = 3))
             # sanitize matrix (rows/cols need finite variance and ≥2 finite values)
             row_ok <- rowSums(is.finite(mat)) >= 2 & apply(mat, 1, function(x) stats::sd(x, na.rm = TRUE) > 0)
             col_ok <- colSums(is.finite(mat)) >= 2 & apply(mat, 2, function(x) stats::sd(x, na.rm = TRUE) > 0)
             mat <- mat[row_ok, col_ok, drop = FALSE]
             mat_scaled <- safe_row_scale(mat)
-            # message("MATFILT:", head(mat_scaled))
+            # message("MATFILT:", head(mat_scaled, n = 3))
             last_mat(mat_scaled)
             list(mat = mat, mat_scaled = mat_scaled)
         }
@@ -231,12 +241,12 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                         phosphoproteomics = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Protein_ID, "_", df$pepG),
                         rnaseq            = rownames(df)
                     )
-                    df$names <- names
+                    df$name <- names
                     if (datatype == "rnaseq") {
                         df$Gene_Name <- gsub("_.*", "", df$name, perl = TRUE)
                         df$Gene_ID <- gsub(".*_", "", df$name, perl = TRUE)
                     }
-                    df <- df %>% dplyr::select(Gene_ID, Gene_Name, names, dplyr::everything())
+                    df <- df %>% dplyr::select(Gene_ID, Gene_Name, name, dplyr::everything())
                     #message("BEF: ", nrow(df), "\nhead: ", head(df))
                     df <- stats::na.omit(df)
                     #message("AFT: ", nrow(df))
@@ -269,6 +279,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                         ht <- ComplexHeatmap::Heatmap(
                             mat,
                             row_km = k,
+                            row_km_repeats = 1,
                             show_row_names = FALSE,
                             cluster_columns = TRUE
                         )
@@ -331,8 +342,10 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     k = input$num_clusters,
                     dep_output = isolate(rv$dep_output[[tbl_name]]),
                     datatype = isolate(rv$datatype[[tbl_name]]),
-                    columns_key <- paste(isolate(rv$data_cols[[tbl_name]]), collapse = "_")
+                    columns_key = paste(isolate(rv$data_cols[[tbl_name]]), collapse = "_"),
+                    dummy = NULL
                 )
+
                 last_params(params)
 
                 # heatmap_task only depends on table + selected columns + cutoffs
@@ -352,6 +365,59 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                         lfc_cut    = params$lfc_cut,
                         datatype   = params$datatype
                     ))
+                }
+                # Pre-warm depflt_cache for this (table, columns, p, lfc)
+
+                depflt_key <- paste(
+                    tbl_name, params$columns_key,
+                    sprintf("pcut=%.4f", params$p_cut),
+                    sprintf("lfc=%.3f", params$lfc_cut),
+                    "depflt",
+                    sep = "_"
+                )
+
+                if (is.null(depflt_cache[[depflt_key]])) {
+                    pr <- promises::future_promise(
+                        {
+                            # Do NOT touch reactiveValues/last_mat in the future thread
+                            dep_output <- strip_sig(params$dep_output)
+                            dep_flt <- DEP2::add_rejections(dep_output, alpha = params$p_cut, lfc = params$lfc_cut)
+
+                            # Build matrices without using get_depflt_matrix (it updates last_mat)
+                            sig <- DEP2::get_signicant(dep_flt)
+                            if (is.null(sig) || nrow(sig) == 0L) {
+                                return(list(mat = NULL, mat_scaled = NULL, dep_flt = dep_flt))
+                            }
+
+                            mat <- as.matrix(SummarizedExperiment::assay(sig))
+                            row_ok <- rowSums(is.finite(mat)) >= 2 &
+                                apply(mat, 1, function(x) stats::sd(x, na.rm = TRUE) > 0)
+                            col_ok <- colSums(is.finite(mat)) >= 2 &
+                                apply(mat, 2, function(x) stats::sd(x, na.rm = TRUE) > 0)
+                            if (!any(row_ok) || !any(col_ok)) {
+                                return(list(mat = NULL, mat_scaled = NULL, dep_flt = dep_flt))
+                            }
+
+                            mat <- mat[row_ok, col_ok, drop = FALSE]
+                            mat_scaled <- safe_row_scale(mat)
+
+                            list(mat = mat, mat_scaled = mat_scaled, dep_flt = dep_flt)
+                        },
+                        seed = TRUE
+                    )
+
+                    # Commit the result to reactiveValues on the main Shiny thread
+                    pr <- promises::then(pr, function(ret) {
+                        depflt_cache[[depflt_key]] <- ret
+                        last_mat(ret$mat_scaled) # optional: keep preview matrix in sync
+                        NULL
+                    })
+
+                    # Swallow/log errors so UI doesn’t break
+                    pr <- promises::catch(pr, function(e) {
+                        # message("Prewarm depflt failed: ", conditionMessage(e))
+                        NULL
+                    })
                 }
                 heatmap_ready(TRUE)
             },
@@ -390,6 +456,8 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
 
             dep_flt_list <- get_depflt(params)
             dep_flt <- dep_flt_list$dep_flt
+# make sure k is defined even when clustering is off
+k <- NULL
             if (params$clustering) {
                 k <- as.integer(params$k)
                 k_max <- max(2L, nrow(dep_flt) - 1L)
@@ -402,8 +470,18 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                     k <- k_max
                 }
             }
+local_mat <- dep_flt_list$mat_scaled
+# handle empty/NULL matrix
+if (is.null(local_mat) || nrow(local_mat) == 0L || ncol(local_mat) == 0L) {
+    plot.new()
+    text(0.5, 0.5,
+        "No significant features with the current FDR/log2FC cutoffs.",
+        cex = 1.1
+    )
+    return(invisible())
+}
+
             # consistent y-limits across clusters
-            local_mat <- dep_flt_list$mat_scaled
             y_lim <- range(local_mat, na.rm = TRUE)
             if (!all(is.finite(y_lim)) || diff(y_lim) == 0) y_lim <- c(-1, 1)
 
@@ -559,24 +637,23 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 # loop to extract genes for each cluster.
                 for (i in 1:length(roword)) {
                     if (i == 1) {
-                        clu <- t(t(res$df[roword[[i]], ]$names))
+                        clu <- t(t(res$df[roword[[i]], ]$name))
                         cluster.all <- cbind(clu, paste("cluster", i, sep = ""))
                     } else {
-                        clu <- t(t(res$df[roword[[i]], ]$names))
+                        clu <- t(t(res$df[roword[[i]], ]$name))
                         clu <- cbind(clu, paste("cluster", i, sep = ""))
                         cluster.all <- rbind(cluster.all, clu)
                     }
                 }
-                colnames(cluster.all) <- c("names", "Cluster")
+                colnames(cluster.all) <- c("name", "Cluster")
                 cluster.all <- as.data.frame(cluster.all)
             }
             
             df <- res$df
             # message("DF: ", str(res$df))        
             if (methods::is(dep_flt, "DEGdata")) {
-                
                 if (!is.null(cluster.all)) {
-                    df <- dplyr::left_join(df, cluster.all, by = "names")
+                    df <- dplyr::left_join(df, cluster.all, by = "name")
                 }
                 sig <- as.data.frame(dep_flt@test_result)
                 sig$Gene_ID <- gsub("^.*_", "", rownames(sig))
@@ -586,12 +663,12 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 rownames(df_filtered) <- NULL
                 if (!is.null(cluster.all)) {
                     df_filtered <- df_filtered %>%
-                        select(Gene_ID, Gene_Name, name, Cluster, everything()) %>%
-                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                        dplyr::select(Gene_ID, Gene_Name, name, Cluster, everything()) %>%
+                            dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 } else {
                     df_filtered <- df_filtered %>%
-                        select(Gene_ID, Gene_Name, name, everything()) %>%
-                        mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                        dplyr::select(Gene_ID, Gene_Name, name, everything()) %>%
+                            dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
                 }
             } else {
                 rd <- SummarizedExperiment::rowData(dep_flt)
@@ -599,7 +676,7 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 sig_genes <- rd$Gene_Name[rd$significant]
                 df_filtered <- res$df[stringr::str_to_lower(res$df$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE] %>% dplyr::select(-ID)
                 if (!is.null(cluster.all)) {
-                    df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "names")
+                    df_filtered <- dplyr::left_join(df_filtered, cluster.all, by = "name")
                 }
                 rownames(df_filtered) <- NULL
                 if (!is.null(cluster.all)) {
@@ -613,12 +690,10 @@ DepHeatmapServer <- function(id, rv, cache, tbl_name) {
                 }
             }
             # message("DF filtered: ", nrow(df_filtered), " rows")
-            DT::datatable(df_filtered,
+            DT::datatable(df_filtered %>% dplyr::select(where(~!is.numeric(.)), where(is.numeric)),
                 extensions = "Buttons",
-                options = list(
-                    scrollX = TRUE, processing = TRUE, pageLength = 10, dom = "Bfrtip",
-                    buttons <- c("copy", "csv", "excel", "pdf", "print")
-                )
+                filter = "top",
+                options = list(scrollX = TRUE, processing = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print"))
             )
         })
 

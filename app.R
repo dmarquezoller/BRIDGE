@@ -16,15 +16,16 @@ suppressPackageStartupMessages({
     library(SummarizedExperiment)
     library(ggplot2)
     library(plotly)
+    library(ComplexHeatmap)
+    library(matrixStats)
 })
 # library(pool)
 # library(shinydashboard)
 # library(shinyWidgets)
-
+ht_opt$message <- FALSE
 # future::plan(multisession, workers = 4)
 future::plan(future.callr::callr, workers = 4)
 set.seed(42)
-
 # Function to run the app with a command-line argument for db_path
 bridge <- function() {
     # Retrieve command-line arguments

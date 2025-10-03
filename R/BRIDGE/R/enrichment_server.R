@@ -23,7 +23,7 @@ EnrichmentServer <- function(id, rv, tbl_name) {
                 rd <- as.data.frame(SummarizedExperiment::rowData(dep_obj))
                 check <- nrow(rd %>% dplyr::filter(significant == TRUE))
             }
-            message("Significant hits: ", check)
+            # message("Significant hits: ", check)
             check
         }
 

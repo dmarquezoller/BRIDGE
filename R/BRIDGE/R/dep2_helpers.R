@@ -1,6 +1,8 @@
 #' @export
-dep2_proteomics <- function(df, tbl_name, rv) {    
-    unique_pg <- DEP2::make_unique(df, names = "Gene_Name", ids = "Protein_ID", delim = ";")
+dep2_proteomics <- function(df, tbl_name, rv) {  
+    df <- df %>% mutate(UID = paste0(Gene_Name, "_", Protein_ID))
+    unique_pg <- DEP2::make_unique(df, names = "UID", ids = "Protein_ID", delim = ";")
+    # unique_pg <- DEP2::make_unique(df, names = "Gene_Name", ids = "Protein_ID", delim = ";")
     ecols <- match(trimws(rv$data_cols[[tbl_name]]), colnames(unique_pg))
     se_pg <- DEP2::make_se_parse(unique_pg, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
     # message("SE: ", paste0(colnames(se_pg), collapse = ", "), paste(head(assay(se_pg)), collapse = ", "))
@@ -18,6 +20,7 @@ dep2_phosphoproteomics <- function(df, tbl_name, rv) {
     df <- df %>% mutate(UID = paste0(Protein_ID, "_", pepG))
     unique_phos <- DEP2::make_unique(df, names = "UID", ids = "UID", delim = ";")
     ecols <- match(trimws(rv$data_cols[[tbl_name]]), colnames(unique_phos))
+    # message("Ecols: ", paste0(ecols, collapse = ", "), "\n")
     se_phos <- DEP2::make_se_parse(unique_phos, columns = ecols, mode = "delim", sep = "_", remove_prefix = T, log2transform = T)
     filter_phos <- DEP2::filter_se(se_phos)
     impute_phos <- DEP2::impute(filter_phos, fun = "MinDet")

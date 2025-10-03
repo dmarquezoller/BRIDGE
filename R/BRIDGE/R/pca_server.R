@@ -101,8 +101,9 @@ pcaServer <- function(id, rv, tbl_name) {
             }
             req(!is.null(top_contrib))
             top_contrib <- as.data.frame(top_contrib)
-            DT::datatable(top_contrib,
+            DT::datatable(top_contrib %>% dplyr::select(where(~!is.numeric(.)), where(is.numeric)),
                 extensions = "Buttons",
+                filter = "top",
                 options = list(
                     scrollX = TRUE, processing = TRUE, pageLength = 10, dom = "Bfrtip",
                     buttons = c("copy", "csv", "excel", "pdf", "print")

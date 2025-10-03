@@ -117,6 +117,9 @@ def main():
     )
     print(f"CSV loaded with {df.shape[0]} rows and {df.shape[1]} columns.")
 
+    # Rename columns that start with a digit by prepending 'X'
+    df.columns = [f"X{col}" if str(col)[0].isdigit() else col for col in df.columns]
+
     if args.id_cols:
         id_cols = []
         for part in args.id_cols.split(","):

@@ -174,7 +174,7 @@ server_function <- function(input, output, session, db_path) {
         }
 
         cache_key <- paste(table_id, paste(rv$data_cols[[table_id]], collapse = "_"), "dep", sep = "_")
-        message("Running analysis for:", table_id, " datatype:", rv$datatype[[table_id]])
+        # message("Running analysis for:", table_id, " datatype:", rv$datatype[[table_id]])
 
         # Recompute heatmap if the button is clicked
 
@@ -304,23 +304,23 @@ server_function <- function(input, output, session, db_path) {
             if (identical(rv$datatype[[tbl_name]], "rnaseq")){
                 df_dep <- DEP2::get_results(dep_output) %>%
                     dplyr::rename(Gene_ID = ID) %>%
-                    dplyr::mutate(
-                        Gene_ID <- sub(".*_(ENS.*G[0-9]+)", "\\1", Gene_ID)
-                    )
-                complete <- dplyr::left_join(df_raw, df_dep, by = "Gene_ID")
+                    dplyr::mutate(Gene_ID = gsub(".*_(ENS.*G[0-9]+)", "\\1", Gene_ID))
+                    complete <- dplyr::left_join(df_raw, df_dep, by = "Gene_ID")
+                     # %>% dplyr::select(-any_of(c("name")))
             } else if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
                 df_dep <- DEP2::get_results(dep_output)                
                 complete <- dplyr::left_join(df_raw %>% dplyr::mutate(
-                        ID = paste0(Protein_ID, "_", pepG)), df_dep, by = "ID") %>%
-                        dplyr::select(-c(ID, name))
+                        ID = paste0(Protein_ID, "_", pepG)), df_dep, by = "ID") 
+                        #%>% dplyr::select(-any_of(c("name")))                        
             } else {
                 df_dep <- DEP2::get_results(dep_output) %>%
                     dplyr::rename(Protein_ID = ID)
                 # message("DF_DEP: ", paste0(colnames(df_dep), collapse = ","), "ID: ", head(df_dep$Protein_ID, 3), " Gene_Name: ", head(df_dep$Gene_Name, 3))
                 complete <- dplyr::left_join(df_raw, df_dep, by = "Protein_ID")
+                # %>% dplyr::select(-any_of(c("name")))
             }
             output[[paste0("table_", tbl_name)]] <- DT::renderDT({
-                DT::datatable(complete, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
+                DT::datatable(complete %>% dplyr::select(where(~ !is.numeric(.)), where(is.numeric)), extensions = "Buttons", filter = "top", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
             })
         })
     })
