@@ -89,14 +89,25 @@ processed_integration <- function(input, output, session, rv) {
             if (is.null(sig) || nrow(sig) == 0L) {
                 return(list(mat = NULL, mat_scaled = NULL))
             }
-            # FIX HERE FOR RNASEQ
             mat <- as.data.frame(SummarizedExperiment::assay(sig))
-            df <- cbind(as.data.frame(SummarizedExperiment::rowData(sig)), mat)            
+
+            if (methods::is(sig, "DEGdata")) {
+                df <- as.data.frame(sig@test_result)
+                df$id_name <- rownames(df)
+                # Rownames are format ENDARG000001_slc01
+                # Handle cases where there might not be an underscore
+                df$Gene_Name <- str_split_fixed(df$id_name, "_", 2)[,1]
+                df$Gene_ID   <- str_split_fixed(df$id_name, "_", 2)[,2]
+                df$XID <- "" # There are no XID in rnaseq data
+                df <- cbind(df, mat)
+            } else {
+                df <- cbind(as.data.frame(SummarizedExperiment::rowData(sig)), mat)  
+            }      
             mat <- mat[which(df$Gene_ID %in% cids), , drop = FALSE]
             # If assay is NULL or empty, exit early
             mat <- as.matrix(mat)
             df_filt <- df[which(df$Gene_ID %in% cids), , drop = FALSE]
-            rownames(mat) <- paste0(df_filt$Gene_ID, "_", df_filt$name)
+            rownames(mat) <- paste0(df_filt$Gene_ID, "_", df_filt$Gene_Name)
             if (is.null(mat) || length(mat) == 0L) {
                 return(list(mat = NULL, mat_scaled = NULL))
             }
@@ -110,22 +121,32 @@ processed_integration <- function(input, output, session, rv) {
         }
 
         get_df_from_dep <- function(dep) {            
-            # FIX HERE FOR RNASEQ
-            res <- as.data.frame(SummarizedExperiment::rowData(dep))
-            if (rv$datatype[[tbl]] == "rnaseq") {
-                res$names <- rownames(res)
-                res$Gene_Name <- stringr::str_to_title(gsub("_.*", "", res$names, perl = TRUE))
-                res$Gene_ID <- gsub(".*_", "", res$names, perl = TRUE)
-                res$names <- NULL
-            }            
+            if (methods::is(dep, "DEGdata")) {
+                res <- as.data.frame(dep@test_result) 
+                res$id_name <- rownames(res)
+                # Rownames are format ENDARG000001_slc01
+                res$Gene_Name <- str_split_fixed(res$id_name, "_", 2)[,1]
+                res$Gene_ID   <- str_split_fixed(res$id_name, "_", 2)[,2]
+                res$XID <- "" # There are no XID in rnaseq data
+            } else {
+                res <- as.data.frame(SummarizedExperiment::rowData(dep))
+            }
             return(res)
         }
 
         get_matrix_from_dep <- function(dep) {    
-            # FIX HERE FOR RNASEQ        
             mat <- as.data.frame(SummarizedExperiment::assay(dep))
+            if (methods::is(dep, "DEGdata")) {
+                df <- as.data.frame(dep@test_result)
+                df$id_name <- rownames(df)
+                # Rownames are format ENDARG000001_slc01
+                df$Gene_Name <- str_split_fixed(df$id_name, "_", 2)[,1]
+                df$Gene_ID   <- str_split_fixed(df$id_name, "_", 2)[,2]
+                df$XID <- "" # There are no XID in rnaseq data
+            } else {
+                df <- as.data.frame(SummarizedExperiment::rowData(dep))
+            }       
             #mat$names <- rownames(mat)
-            df <- as.data.frame(SummarizedExperiment::rowData(dep))
             mat$Gene_Name <- stringr::str_to_title(df$Gene_Name)  # gsub("_.*", "", mat$names, perl = TRUE)
             mat$Gene_ID <- df$Gene_ID  # gsub(".*_", "", mat$names, perl = TRUE)
             if("pepG" %in% colnames(df)) {
@@ -177,8 +198,8 @@ processed_integration <- function(input, output, session, rv) {
 
             res <- get_df_from_dep(dep)
             mat <- get_matrix_from_dep(dep)
-            dep_flt <- res[res$Gene_ID %in% common_ids | res$XID %in% common_ids, ]
-            mat_flt <- mat[mat$Gene_ID %in% common_ids | mat$XID %in% common_ids, ]
+            dep_flt <- res[res$Gene_ID %in% common_ids | res$XID %in% common_ids, ]  
+            mat_flt <- mat[mat$Gene_ID %in% common_ids | mat$XID %in% common_ids, ] 
 
             data <- dplyr::inner_join(mat_flt, dep_flt, by = "Gene_ID", keep=FALSE, suffix=c("",".y")) %>%
                 select(-ends_with(".y"))
@@ -269,7 +290,18 @@ processed_integration <- function(input, output, session, rv) {
         rv$integration_preview_dims <- lapply(selected_tables, function(tbl) dim_info[[tbl]])
         names(rv$integration_preview_dims) <- selected_tables
         # Estimate cluster number on stacked data
-        stacked <- do.call(rbind, intersected_matrix) # genes x samples
+        # Check if all matrices have the same number of columns
+        col_counts <- sapply(intersected_matrix, ncol)
+        all_same_cols <- length(unique(col_counts)) == 1
+
+        # Conditionally create stacked
+        if (all_same_cols) {
+            stacked <- do.call(rbind, intersected_matrix)  # genes x samples 
+            # If same number of columns stacking is possible
+        } else {
+            stacked <- intersected_matrix[[1]]  # use only the first table
+            # If differing number of columns use only first matrix for optimal k computation
+        }
         if (nrow(stacked) < 2) {
             showNotification("Not enough genes for clustering.", type = "error")
             rv$optimal_k <- NULL
