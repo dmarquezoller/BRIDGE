@@ -28,17 +28,8 @@ int_heatmap_server <- function(input, output, session, rv) {
         all_tables <- rv$intersected_matrix_processed
 
         first_tbl <- all_tables[[1]]
-        mat_scaled <- safe_row_scale(first_tbl) # Scale across rows
-        # allow some NAs; require ≥2 finite values and non-zero SD
-        row_ok <- rowSums(is.finite(mat_scaled)) >= 2 &
-            apply(mat_scaled, 1, function(x) stats::sd(x, na.rm = TRUE) > 0)
-
-        mat_scaled <- mat_scaled[row_ok, , drop = FALSE]
-        if (nrow(mat_scaled) < 2 || ncol(mat_scaled) < 2) {
-            shiny::showNotification("Too few usable rows/columns after cleaning.", type = "warning")
-            return(NULL)
-        }
-
+        mat_scaled <- first_tbl
+        
         k <- as.integer(input$heatmap_k)
         if (!is.finite(k) || k < 2) k <- 2
 
@@ -82,8 +73,7 @@ int_heatmap_server <- function(input, output, session, rv) {
         lapply(names(all_tables), function(tbl) {
             local({
                 tbl_name <- tbl
-                mat <- all_tables[[tbl_name]]
-                mat_scaled_tbl <- safe_row_scale(mat)
+                mat_scaled_tbl <- all_tables[[tbl_name]]                
 
                 gene_names <- sapply(strsplit(rownames(mat_scaled_tbl), "_"), `[`, 1)
                 cluster_vec <- factor(rv$gene_to_cluster[gene_names], levels = 1:k)
@@ -97,8 +87,7 @@ int_heatmap_server <- function(input, output, session, rv) {
                 cluster_vec <- cluster_vec[ordered]
 
                 output[[paste0("heatmap_", tbl_name)]] <- shiny::renderPlot({
-                    mat <- all_tables[[tbl_name]]
-                    mat_scaled_tbl <- safe_row_scale(mat)
+                    mat_scaled_tbl <- all_tables[[tbl_name]]                    
 
                     # Build cluster average profiles
                     cluster_ids <- split(seq_len(nrow(mat_ordered)), cluster_vec)
@@ -142,6 +131,7 @@ int_heatmap_server <- function(input, output, session, rv) {
                         cluster_columns = FALSE,
                         show_row_dend = FALSE,
                         show_column_dend = TRUE,
+                        show_row_names = FALSE,
                         row_split = cluster_vec,
                         row_names_gp = ggfun::gpar(fontsize = 6),
                         column_names_gp = ggfun::gpar(fontsize = 8),
@@ -169,7 +159,7 @@ int_heatmap_server <- function(input, output, session, rv) {
                 )
 
                 output[[paste0("cluster_table_", tbl_name)]] <- DT::renderDT({
-                    DT::datatable(df, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 5, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
+                    DT::datatable(df %>% dplyr::select(where(~ !is.numeric(.)), where(is.numeric)), extensions = "Buttons", filter = "top", options = list(scrollX = TRUE, pageLength = 5, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
                 })
             })
         })

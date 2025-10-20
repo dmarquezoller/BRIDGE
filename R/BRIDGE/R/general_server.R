@@ -15,7 +15,7 @@ server_function <- function(input, output, session, db_path) {
         tbl_keys = "storr_keys",
         con = con
     )
-    rv <- reactiveValues(tables = list(), table_names = character(), ht_matrix = list(), time_cols = list(), datatype = character(), constrasts = list()) # variable that stores most of the important values for each table
+    rv <- reactiveValues(tables = list(), table_names = character(), ht_matrix = list(), data_cols = list(), datatype = character(), constrasts = list()) # variable that stores most of the important values for each table
 
     valid_tables <- shiny::reactive({
         shiny::req(input$species)
@@ -75,19 +75,19 @@ server_function <- function(input, output, session, db_path) {
 
     # COLUMN SELECTOR INPUT
 
-    # From the metadata table retrieved show the possible timepoints columns to choose
+    # From the metadata table retrieved show the possible datapoints columns to choose
     output$column_selector <- shiny::renderUI({
         meta <- table_metadata()
         if (is.null(meta)) {
             return(shiny::helpText("No metadata available for this table."))
         }
 
-        timepoint_cols <- unlist(strsplit(meta$timepoint_columns, ","))
+        datapoint_cols <- unlist(strsplit(meta$datapoint_columns, ","))
 
         shinyWidgets::pickerInput(
-            inputId = "timepoints_selected",
-            label = "Select timepoint columns to load:",
-            choices = c(timepoint_cols),
+            inputId = "datapoints_selected",
+            label = "Select datapoint columns to load:",
+            choices = c(datapoint_cols),
             selected = NULL,
             multiple = TRUE,
             options = shinyWidgets::pickerOptions(
@@ -139,7 +139,7 @@ server_function <- function(input, output, session, db_path) {
         ))
 
 
-        shiny::req(input$selected_table, input$timepoints_selected)
+        shiny::req(input$selected_table, input$datapoints_selected)
 
         meta <- table_metadata()
         annotation <- annotation_metadata()
@@ -149,9 +149,9 @@ server_function <- function(input, output, session, db_path) {
         }
         # Always include identifiers
         id_cols <- trimws(unlist(strsplit(meta$identifier_columns, ",")))
-        timepoint_cols <- trimws(input$timepoints_selected)
+        datapoint_cols <- trimws(input$datapoints_selected)
 
-        safe_cols <- sprintf('"%s"', unique(c(id_cols, timepoint_cols)))
+        safe_cols <- sprintf('"%s"', unique(c(id_cols, datapoint_cols)))
         col_string <- paste(safe_cols, collapse = ", ")
         query <- sprintf("SELECT %s FROM %s", col_string, input$selected_table)
         new_data <- DBI::dbGetQuery(con, query, )
@@ -164,25 +164,25 @@ server_function <- function(input, output, session, db_path) {
         if (!(table_id %in% rv$table_names)) {
             rv$tables[[table_id]] <- new_data
             rv$table_names <- c(rv$table_names, table_id)
-            matrix_data <- new_data[, timepoint_cols]
+            matrix_data <- new_data[, datapoint_cols]
             rv$ht_matrix[[table_id]] <- as.matrix(matrix_data)
             rv$id_cols[[table_id]] <- id_cols
-            rv$time_cols[[table_id]] <- input$timepoints_selected
+            rv$data_cols[[table_id]] <- input$datapoints_selected
             rv$datatype[[table_id]] <- datatype
             rv$species[[table_id]] <- input$species
             rv$annotation[[table_id]] <- annotation_data
         }
 
-        cache_key <- paste(table_id, paste(rv$time_cols[[table_id]], collapse = "_"), "dep", sep = "_")
-        message("Running analysis for:", table_id, " datatype:", rv$datatype[[table_id]])
+        cache_key <- paste(table_id, paste(rv$data_cols[[table_id]], collapse = "_"), "dep", sep = "_")
+        # message("Running analysis for:", table_id, " datatype:", rv$datatype[[table_id]])
 
         # Recompute heatmap if the button is clicked
 
         if (cache$exists(cache_key)) {
-            message("Loading DEP output from cache: ", cache_key)
+            # message("Loading DEP output from cache: ", cache_key)
             dep_output <- cache$get(cache_key)
         } else {
-            message("Computing and caching DEP output: ", cache_key)
+            # message("Computing and caching DEP output: ", cache_key)
             if (rv$datatype[[table_id]] == "proteomics") {
                 dep_output <- dep2_proteomics(rv$tables[[table_id]], table_id, rv)
             } else if (rv$datatype[[table_id]] == "phosphoproteomics") {
@@ -276,8 +276,8 @@ server_function <- function(input, output, session, db_path) {
                     ),
                     tabPanel(
                         "Gene Expression",
-                        fluidRow(TimelineUI(paste0("Timeline_", tbl_name), tbl_name))
-                        # remove TimelineTableUI if merged
+                        fluidRow(datapointsUI(paste0("datapoints_", tbl_name), tbl_name))
+                        # remove datapointsTableUI if merged
                     ),
                     tabPanel(
                         "Enrichment analysis",
@@ -304,24 +304,30 @@ server_function <- function(input, output, session, db_path) {
             if (identical(rv$datatype[[tbl_name]], "rnaseq")){
                 df_dep <- DEP2::get_results(dep_output) %>%
                     dplyr::rename(Gene_ID = ID) %>%
-                    dplyr::mutate(
-                        Gene_ID = sub(".*_(ENSDARG[0-9]+)", "\\1", Gene_ID)
-                    )
-                complete <- dplyr::left_join(df_raw, df_dep, by = "Gene_ID")
+                    dplyr::mutate(Gene_ID = gsub(".*_(ENS.*G[0-9]+)", "\\1", Gene_ID))
+                    complete <- dplyr::left_join(df_raw, df_dep, by = "Gene_ID")
+                     # %>% dplyr::select(-any_of(c("name")))
+            } else if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
+                df_dep <- DEP2::get_results(dep_output)                
+                complete <- dplyr::left_join(df_raw %>% dplyr::mutate(
+                        ID = paste0(Protein_ID, "_", pepG)), df_dep, by = "ID") 
+                        #%>% dplyr::select(-any_of(c("name")))                        
             } else {
                 df_dep <- DEP2::get_results(dep_output) %>%
                     dplyr::rename(Protein_ID = ID)
+                # message("DF_DEP: ", paste0(colnames(df_dep), collapse = ","), "ID: ", head(df_dep$Protein_ID, 3), " Gene_Name: ", head(df_dep$Gene_Name, 3))
                 complete <- dplyr::left_join(df_raw, df_dep, by = "Protein_ID")
+                # %>% dplyr::select(-any_of(c("name")))
             }
             output[[paste0("table_", tbl_name)]] <- DT::renderDT({
-                DT::datatable(complete, extensions = "Buttons", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
+                DT::datatable(complete %>% dplyr::select(where(~ !is.numeric(.)), where(is.numeric)), extensions = "Buttons", filter = "top", options = list(scrollX = TRUE, pageLength = 10, dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")))
             })
         })
     })
 
     # RawHeatmapServer(paste0("RawHeatmap_", tbl_name), rv) #Function in heatmap_server.R
     wired <- reactiveValues(
-        timeline = character(),
+        datapoints = character(),
         raw      = character(),
         dep      = character(),
         pca      = character(),
@@ -336,10 +342,10 @@ server_function <- function(input, output, session, db_path) {
         tbls <- rv$table_names
 
         for (tbl in tbls) {
-            # Always-ok modules (need raw table + time cols)
-            if (!(tbl %in% wired$timeline) && !is.null(rv$tables[[tbl]]) && !is.null(rv$time_cols[[tbl]])) {
-                TimelineServer(paste0("Timeline_", tbl), rv, tbl)
-                wired$timeline <- union(wired$timeline, tbl)
+            # Always-ok modules (need raw table + data cols)
+            if (!(tbl %in% wired$datapoints) && !is.null(rv$tables[[tbl]]) && !is.null(rv$data_cols[[tbl]])) {
+                datapointsServer(paste0("datapoints_", tbl), rv, tbl)
+                wired$datapoints <- union(wired$datapoints, tbl)
             }
             if (!(tbl %in% wired$raw) && !is.null(rv$tables[[tbl]])) {
                 RawHeatmapServer(paste0("RawHeatmap_", tbl), rv, tbl)
@@ -367,7 +373,7 @@ server_function <- function(input, output, session, db_path) {
 
     # Optional cleanup when a table is removed
     observeEvent(input$delete_data, {
-        wired$timeline <- setdiff(wired$timeline, input$remove)
+        wired$datapoints <- setdiff(wired$datapoints, input$remove)
         wired$raw <- setdiff(wired$raw, input$remove)
         wired$dep <- setdiff(wired$dep, input$remove)
         wired$pca <- setdiff(wired$pca, input$remove)

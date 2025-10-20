@@ -1,5 +1,5 @@
 #' @export
-int_timeline_server <- function(input, output, session, data_combined, reference_time_names) {
+int_datapoints_server <- function(input, output, session, data_combined, reference_data_names) {
     processed_data <- reactive({
         shiny::req(input$scale_integration)
         scale_input <- input$scale_integration
@@ -15,7 +15,7 @@ int_timeline_server <- function(input, output, session, data_combined, reference
         shiny::req(input$search_gene_integration)
         gene <- stringr::str_to_lower(trimws(input$search_gene_integration))
         data <- processed_data()
-        data <- subset(data, stringr::str_to_lower(Gene_Name) %in% gene)
+        data <- subset(data, stringr::str_to_lower(Gene_Name) %in% gene | stringr::str_to_lower(gsub("_.*", "", Gene_Name)) %in% gene)
         validate(need(nrow(data) > 0, "No data found for the entered gene(s)"))
         data
     })
@@ -24,19 +24,21 @@ int_timeline_server <- function(input, output, session, data_combined, reference
         data <- selected_data()
 
         # Clean stage names
-        unique_timepoints <- reference_time_names %>%
+        unique_datapoints <- reference_data_names %>%
             gsub("_[0-9]+$", "", .) %>%
             gsub("[_.-]+$", "", .) %>%
-            unique()
+            unique() %>%
+            str_sort(decreasing = FALSE, numeric = TRUE)         
 
         # Reshape
         data_long <- data %>%
-            pivot_longer(cols = all_of(reference_time_names), names_to = "Stage", values_to = "Expression") %>%
+            pivot_longer(cols = all_of(reference_data_names), names_to = "Stage", values_to = "Expression") %>%
             mutate(
                 StageGroup = gsub("[0-9]+$", "", Stage) %>% gsub("[_.-]+$", "", .),
-                StageGroup = factor(StageGroup, levels = unique_timepoints)
+                #StageGroup = factor(StageGroup, levels = mixedrank(unique(Stage)))
+                StageGroup = factor(StageGroup, levels = unique_datapoints)
             )
-
+        message("Datalong: ", paste(str(data_long)))
         data_long
     })
     data_avg <- reactive({
@@ -45,7 +47,7 @@ int_timeline_server <- function(input, output, session, data_combined, reference
             summarize(MeanExpression = mean(Expression, na.rm = TRUE), .groups = "drop")
     })
 
-    output$integration_timeline_plot <- shiny::renderPlot({
+    output$integration_datapoints_plot <- shiny::renderPlot({
         long <- data_long()
         avg <- data_avg()
 

@@ -64,15 +64,6 @@ pcaServer <- function(id, rv, tbl_name) {
                     mutate(contribution = (loading^2) / sum(loading^2)) %>%
                     ungroup()
 
-                # Top 50 genes (by |loading|) for PC1:
-                # top_pc1 <- loadings_df |>
-                #    filter(PC == "PC1") |>
-                #    slice_max(abs_loading, n = 10)
-                #
-                # top_pc2 <- loadings_df |>
-                #    filter(PC == "PC2") |>
-                #    slice_max(abs_loading, n = 10)
-
                 top_contrib <- contrib %>%
                     filter(PC == "PC1" | PC == "PC2") %>%
                     arrange(desc(contribution))
@@ -110,8 +101,9 @@ pcaServer <- function(id, rv, tbl_name) {
             }
             req(!is.null(top_contrib))
             top_contrib <- as.data.frame(top_contrib)
-            DT::datatable(top_contrib,
+            DT::datatable(top_contrib %>% dplyr::select(where(~!is.numeric(.)), where(is.numeric)),
                 extensions = "Buttons",
+                filter = "top",
                 options = list(
                     scrollX = TRUE, processing = TRUE, pageLength = 10, dom = "Bfrtip",
                     buttons = c("copy", "csv", "excel", "pdf", "print")

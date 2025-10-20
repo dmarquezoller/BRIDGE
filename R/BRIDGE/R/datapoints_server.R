@@ -1,5 +1,5 @@
 #' @export
-TimelineServer <- function(id, rv, tbl_name) {
+datapointsServer <- function(id, rv, tbl_name) {
     moduleServer(id, function(input, output, session) {
         # --- gene choices for this table ---
         observe({
@@ -38,9 +38,9 @@ TimelineServer <- function(id, rv, tbl_name) {
             stringr::str_to_lower(trimws(input$search_gene))
         })
 
-        unique_timepoints <- reactive({
-            req(rv$time_cols[[tbl_name]])
-            rv$time_cols[[tbl_name]] |>
+        unique_datapoints <- reactive({
+            req(rv$data_cols[[tbl_name]])
+            rv$data_cols[[tbl_name]] |>
                 gsub("_[0-9]+$", "", x = _) |>
                 gsub("[_.-]+$", "", x = _) |>
                 unique()
@@ -48,9 +48,9 @@ TimelineServer <- function(id, rv, tbl_name) {
 
         # --- long format for plotting (handles phospho vs others) ---
         long_data <- reactive({
-            req(processed_data(), rv$time_cols[[tbl_name]])
+            req(processed_data(), rv$data_cols[[tbl_name]])
             dt <- processed_data()
-            tp <- rv$time_cols[[tbl_name]]
+            tp <- rv$data_cols[[tbl_name]]
             if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
                 df <- subset(dt, stringr::str_to_lower(Gene_Name) %in% genes_chosen())
                 validate(need(nrow(df) > 0, "No data found for the entered gene(s)."))
@@ -58,8 +58,9 @@ TimelineServer <- function(id, rv, tbl_name) {
                 keep <- c("Gene_pepG", tp)
                 df <- df[, keep, drop = FALSE]
                 dl <- tidyr::pivot_longer(df, cols = -Gene_pepG, names_to = "Stage", values_to = "Expression")
-                dl$StageGroup <- factor(gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
-                    levels = unique_timepoints()
+                dl$StageGroup <- factor(
+                    gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
+                    levels <- unique_datapoints()
                 )
                 dl
             } else {
@@ -68,24 +69,26 @@ TimelineServer <- function(id, rv, tbl_name) {
                 keep <- c("Gene_Name", tp)
                 df <- df[, keep, drop = FALSE]
                 dl <- tidyr::pivot_longer(df, cols = -Gene_Name, names_to = "Stage", values_to = "Expression")
-                dl$StageGroup <- factor(gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
-                    levels = unique_timepoints()
+                dl$StageGroup <- factor(
+                    gsub("[_.-]+$", "", gsub("[0-9]+$", "", dl$Stage)),
+                    levels <- unique_datapoints()
                 )
                 dl
             }
         })
 
         # --- table output (wide) ---
-        output$time_plot_dt <- DT::renderDT({
+        output$data_plot_dt <- DT::renderDT({
             df <- processed_data()
-            tp <- rv$time_cols[[tbl_name]]
+            tp <- rv$data_cols[[tbl_name]]
             if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
                 keep <- c("Gene_Name", "pepG", tp)
             } else {
                 keep <- c("Gene_Name", tp)
             }
-            DT::datatable(df[, keep, drop = FALSE],
+            DT::datatable(df[, keep, drop = FALSE] %>% dplyr::select(where(~!is.numeric(.)), where(is.numeric)),
                 extensions = "Buttons",
+                filter = "top",
                 options = list(
                     scrollX = TRUE, pageLength = 10,
                     dom = "Bfrtip",
@@ -95,7 +98,7 @@ TimelineServer <- function(id, rv, tbl_name) {
         })
 
         # --- plot output ---
-        output$time_plot <- renderPlot({
+        output$data_plot <- renderPlot({
             dl <- long_data()
             if (identical(rv$datatype[[tbl_name]], "phosphoproteomics")) {
                 data_avg <- dplyr::summarise(dplyr::group_by(dl, StageGroup, Gene_pepG),
@@ -132,7 +135,7 @@ TimelineServer <- function(id, rv, tbl_name) {
                         x = "Stage",
                         y = "log Expression",
                         title = paste(
-                            "Peptide Expression Time Line",
+                            "Peptide Expression data Line",
                             stringr::str_to_title(input$search_gene)
                         ),
                         color = "Proteins"
@@ -179,7 +182,7 @@ TimelineServer <- function(id, rv, tbl_name) {
                         x = "Stage",
                         y = "log Expression",
                         title = paste(
-                            "Protein Expression Time Line",
+                            "Protein Expression data Line",
                             stringr::str_to_title(input$search_gene)
                         ),
                         color = "Proteins"

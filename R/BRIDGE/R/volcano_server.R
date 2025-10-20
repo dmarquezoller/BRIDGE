@@ -75,8 +75,8 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                 # message("DF_table: ", head(df_table, 3), "\ndpflt: ", str(SummarizedExperiment::colData(dep_flt)))
 
                 names <- switch(datatype,
-                    proteomics        = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Gene_ID),
-                    phosphoproteomics = paste0(df$Gene_Name, "_", df$pepG),
+                    proteomics        = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Protein_ID),
+                    phosphoproteomics = paste0(stringr::str_to_title(df$Gene_Name), "_", df$Protein_ID, "_", df$pepG),
                     rnaseq            = rownames(df)
                 )
                 # message("NAMING: ", head(names))
@@ -126,7 +126,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                     highlight    = isolate(input$volcano_search) |> stringr::str_trim(),
                     dep_output   = isolate(rv$dep_output[[tbl_name]]),
                     datatype     = isolate(rv$datatype[[tbl_name]]),
-                    columns_key  = paste(sort(trimws(isolate(rv$time_cols[[tbl_name]]))), collapse = "_")
+                    columns_key <- paste(sort(trimws(isolate(rv$data_cols[[tbl_name]]))), collapse = "_")
 
                 )
                 last_params(params)
@@ -185,7 +185,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
             } else {
                 highlight <- character(0)
             }
-            message("Highlighting: ", paste(highlight, collapse = ", "), "\nDFnames: ", paste(head(df$name), collapse = ", "))
+            # message("Highlighting: ", paste(highlight, collapse = ", "), "\nDFnames: ", paste(head(df$name), collapse = ", "))
             # pre-compute helpers
             df$neglog10p <- -log10(df$pval)
             is_sig <- is.finite(df$log2FC) & is.finite(df$neglog10p) &
@@ -210,7 +210,7 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                 showNotification("No finite points to plot for this contrast.", type = "warning")
                 return(plotly::plot_ly())
             }
-            message("highlight: ", paste(highlight, collapse = ", "))
+            # message("highlight: ", paste(highlight, collapse = ", "))
             # Use lab = df$name for all, and selectLab = highlights to force labels
 
             keyvals <- ifelse(
@@ -254,9 +254,8 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
 
         output$volcano_sig_table <- DT::renderDT({
            params <- req(last_params())
-           res <- get_dep_result()
+           res <- req(get_dep_result())
            req(res)
-           dep_flt <- get_depflt(params)
            # message("Filtered DEGs: ", class(dep_flt))
 
            key <- rv$current_dep_volcano_key[[tbl_name]]
@@ -268,31 +267,33 @@ VolcanoServer <- function(id, rv, cache, tbl_name) {
                df$name <- rownames(df)
                df$Gene_ID <- gsub("^(.*)_", "", rownames(df))
                gene_map <- rv$tables[[tbl_name]][, c("Gene_ID", "Gene_Name")]
-               df <- dplyr::left_join(df, gene_map, by = "Gene_ID")
+               df <- dplyr::left_join(df, gene_map, by = "names")
 
                sig <- as.data.frame(dep_flt@test_result)
                sig$Gene_ID <- gsub("^(.*)_", "", rownames(dep_flt@test_result))
-               sig <- dplyr::left_join(sig, gene_map, by = "Gene_ID")
+               sig$Gene_Name <- gsub("_.*$", "", rownames(sig))
+               sig <- dplyr::left_join(sig, gene_map, by = "names")
                sig_genes <- sig$Gene_Name[sig$significant]
 
-               df_filtered <- df[df$Gene_Name %in% sig_genes, , drop = FALSE]
+               df_filtered <- df[stringr::str_to_lower(df$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE]
                rownames(df_filtered) <- NULL
                df_filtered <- df_filtered %>%
-                   select(Gene_ID, Gene_Name, name, everything()) %>%
-                   mutate(Gene_Name = stringr::str_to_title(Gene_Name))
+                   dplyr::select(Gene_ID, Gene_Name, name, everything()) %>%
+                       dplyr::mutate(Gene_Name = stringr::str_to_title(Gene_Name))
            } else {
                rd <- SummarizedExperiment::rowData(dep_flt)
                sig_genes <- rd$Gene_Name[rd$significant]
-               df_filtered <- res$table[res$table$Gene_Name %in% sig_genes, , drop = FALSE] %>% dplyr::select(-ID)
+               df_filtered <- res$table[stringr::str_to_lower(res$table$Gene_Name) %in% stringr::str_to_lower(sig_genes), , drop = FALSE] %>% dplyr::select(-ID)
                df_filtered$name <- rownames(df_filtered)
                rownames(df_filtered) <- NULL
                df_filtered <- df_filtered %>%
-                   select(Gene_ID, Gene_Name, name, everything()) %>%
+                   dplyr::select(Gene_ID, Gene_Name, name, everything()) %>%
                    mutate(Gene_Name = stringr::str_to_title(Gene_Name))
            }
 
-           DT::datatable(df_filtered,
+           DT::datatable(df_filtered %>% dplyr::select(where(~!is.numeric(.)), where(is.numeric)),
                extensions = "Buttons",
+               filter = "top",
                options = list(
                    scrollX = TRUE, pageLength = 10,
                    dom = "Bfrtip", buttons = c("copy", "csv", "excel", "pdf", "print")

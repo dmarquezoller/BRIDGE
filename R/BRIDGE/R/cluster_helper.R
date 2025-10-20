@@ -87,8 +87,8 @@ safe_nbclust <- function(mat, k_min = 2, k_max = 10,
 # robust row scaling: never produces NaN rows
 safe_row_scale <- function(m) {
     m <- as.matrix(m)
-    mu <- rowMeans(m, na.rm = TRUE)
-    sdv <- apply(m, 1, function(x) stats::sd(x, na.rm = TRUE))
+    mu <- matrixStats::rowMeans2(m, na.rm = TRUE)
+    sdv <- matrixStats::rowSds(m, na.rm = TRUE)
     sdv[!is.finite(sdv) | sdv == 0] <- 1 # prevent divide-by-zero
     m <- sweep(m, 1, mu, FUN = "-")
     sweep(m, 1, sdv, FUN = "/")

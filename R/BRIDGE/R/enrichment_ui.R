@@ -7,6 +7,12 @@ EnrichmentUI <- function(id, tbl_name) {
             fluidRow(
                 column(4, selectInput(ns("comparison_db"), "Database", choices = c("GO", "KEGG", "Reactome"))),
                 column(4, uiOutput(ns("contrast_ui"))),
+                column(4, shiny::numericInput(
+                            ns("enrichment_pcutoff"), "FDR Threshold:",
+                            min = 0, max = 1, value = 0.05, step = 0.01)),
+                column(4, shiny::numericInput(
+                            ns("enrichment_fccutoff"), "FC Threshold:",
+                            min = 0, max = 10, value = 1, step = 0.1)),
                 column(4, shinyWidgets::actionBttn(ns("compute_enrichment"), span("Compute Enrichment", style = "color: white;"), style = "simple", color = "primary", size = "sm"))
             )
         ),
