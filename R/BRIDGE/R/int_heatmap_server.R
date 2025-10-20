@@ -167,23 +167,22 @@ int_heatmap_server <- function(input, output, session, rv) {
 
         output$lfc_scatter_selector <- shiny::renderUI({
             shiny::req(rv$scatter_plots)
-            shiny::selectInput("scatter_comparisons", "Select comparison:", choices = names(rv$scatter_plots))
+            shiny::selectInput("scatter_comparisons", "Select comparison:", choices = names(rv$scatter_plots)[!grepl("phosphoproteomics", names(rv$scatter_plots))])
         })
 
         output$lfc_scatter_ui <- shiny::renderUI({
             shiny::req(rv$intersected_tables_processed)
             selected_tables <- names(rv$intersected_tables_processed)
             shiny::req(rv$scatter_plots)
-
-            if (any(rv$datatype[selected_tables] == "phosphoproteomics")) {
-                # Return a nicely styled message div
+            if (is.null(names(rv$scatter_plots)[!grepl("phosphoproteomics", names(rv$scatter_plots))]) || length(names(rv$scatter_plots)[!grepl("phosphoproteomics", names(rv$scatter_plots))]) == 0) {
                 shiny::div(
                     style = "padding: 20px; color: #d9534f; font-weight: bold; text-align: center;",
-                    "Scatter plot is not available when phosphoproteomics data is included because of non-1:1 row mapping."
+                    "Scatter plot is not available for this integration."
                 )
             } else {
                 plotly::plotlyOutput("lfc_scatter_plot", height = "400px", width = "100%")
             }
+            
         })
 
 
