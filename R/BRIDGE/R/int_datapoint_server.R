@@ -38,7 +38,7 @@ int_datapoints_server <- function(input, output, session, data_combined, referen
                 #StageGroup = factor(StageGroup, levels = mixedrank(unique(Stage)))
                 StageGroup = factor(StageGroup, levels = unique_datapoints)
             )
-        message("Datalong: ", paste(str(data_long)))
+        
         data_long
     })
     data_avg <- reactive({

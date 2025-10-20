@@ -116,7 +116,7 @@ processed_integration <- function(input, output, session, rv) {
             col_ok <- colSums(is.finite(mat)) >= 2 & apply(mat, 2, function(x) stats::sd(x, na.rm = TRUE) > 0)
             mat <- mat[row_ok, col_ok, drop = FALSE]            
             mat_scaled <- safe_row_scale(mat)
-            message("Scaled matrix: ", nrow(mat_scaled), " rows, ", ncol(mat_scaled), " cols", "\n IDS: ", paste(colnames(mat_scaled), collapse = ", "), "\nGENES: ", head(rownames(mat_scaled), n = 3), "\n")
+            #message("Scaled matrix: ", nrow(mat_scaled), " rows, ", ncol(mat_scaled), " cols", "\n IDS: ", paste(colnames(mat_scaled), collapse = ", "), "\nGENES: ", head(rownames(mat_scaled), n = 3), "\n")
             mat_scaled
         }
 
