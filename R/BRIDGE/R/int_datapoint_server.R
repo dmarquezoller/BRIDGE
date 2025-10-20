@@ -27,16 +27,18 @@ int_datapoints_server <- function(input, output, session, data_combined, referen
         unique_datapoints <- reference_data_names %>%
             gsub("_[0-9]+$", "", .) %>%
             gsub("[_.-]+$", "", .) %>%
-            unique()
+            unique() %>%
+            str_sort(decreasing = FALSE, numeric = TRUE)         
 
         # Reshape
         data_long <- data %>%
             pivot_longer(cols = all_of(reference_data_names), names_to = "Stage", values_to = "Expression") %>%
             mutate(
                 StageGroup = gsub("[0-9]+$", "", Stage) %>% gsub("[_.-]+$", "", .),
-                StageGroup <- factor(StageGroup, levels = unique_datapoints)
+                #StageGroup = factor(StageGroup, levels = mixedrank(unique(Stage)))
+                StageGroup = factor(StageGroup, levels = unique_datapoints)
             )
-
+        message("Datalong: ", paste(str(data_long)))
         data_long
     })
     data_avg <- reactive({

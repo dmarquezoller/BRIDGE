@@ -18,6 +18,7 @@ suppressPackageStartupMessages({
     library(plotly)
     library(ComplexHeatmap)
     library(matrixStats)
+    library(gtools)
 })
 # library(pool)
 # library(shinydashboard)

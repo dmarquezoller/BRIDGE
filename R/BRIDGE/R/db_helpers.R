@@ -12,3 +12,7 @@ connect_pool <- function(db_path) {
 list_tables <- function(con) {
     DBI::dbListTables(con)
 }
+
+
+#' @export
+mixedrank <- function(x, decreasing = F) order(gtools::mixedorder(x, decreasing = decreasing))
