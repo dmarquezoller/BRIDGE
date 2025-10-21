@@ -144,58 +144,6 @@
       "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
       "Repository": "CRAN"
     },
-    "BRIDGE": {
-      "Package": "BRIDGE",
-      "Version": "1.0.0",
-      "Source": "unknown",
-      "Type": "Package",
-      "Title": "BRIDGE Multi-Omics Analysis Modules",
-      "Authors@R": "person(given = \"David\",  family = \"Marquez-Oller\",  email = \"david.marquez-oller@imp.ac.at\",  role = c(\"aut\", \"cre\")) person(given = \"Joerg\",  family = \"Fallmann\",  email = \"joerg.fallmann@imp.ac.at\",  role = c(\"aut\", \"cre\"))",
-      "Description": "Provides modular functions for the BRIDGE app, enabling scientists to explore, analyze, and integrate multi-omics datasets (proteomics, phosphoproteomics, and RNA-seq) interactively and privately, without programming skills. Supports individual and integrative analysis, generating interactive visualizations such as heatmaps, volcano plots, and time-course plots. Especially powerful for identifying shared biological signals across omics layers.",
-      "License": "MIT",
-      "Encoding": "UTF-8",
-      "Depends": [
-        "R (>= 4.2.0)"
-      ],
-      "Imports": [
-        "shiny",
-        "shinydashboard",
-        "shinyWidgets",
-        "htmltools",
-        "DT",
-        "ComplexHeatmap",
-        "InteractiveComplexHeatmap",
-        "dplyr",
-        "tidyr",
-        "tidyverse",
-        "EnhancedVolcano",
-        "plotly",
-        "storr",
-        "future",
-        "promises",
-        "SummarizedExperiment",
-        "S4Vectors",
-        "reactome.db",
-        "org.Dr.eg.db",
-        "org.Hs.eg.db",
-        "org.Mm.eg.db",
-        "enrichplot",
-        "circlize",
-        "shinycssloaders",
-        "NbClust",
-        "DBI",
-        "RSQLite",
-        "ReactomePA",
-        "msigdbr"
-      ],
-      "Suggests": [
-        "testthat"
-      ],
-      "RoxygenNote": "7.3.2",
-      "NeedsCompilation": "no",
-      "Author": "Joerg Fallmann [aut, cre]",
-      "Maintainer": "Joerg Fallmann <joerg.fallmann@imp.ac.at>"
-    },
     "Biobase": {
       "Package": "Biobase",
       "Version": "2.66.0",

@@ -26,8 +26,8 @@ RUN mkdir -p /packages/R \
 COPY renv.lock /packages/R
 
 ENV R_REMOTES_UPGRADE="never"
-RUN	R -e "install.packages('renv', repos = 'https://cloud.r-project.org/')" \
-    && R -e "renv::restore('/packages/R')" 
+RUN R -e "install.packages('renv', repos = 'https://cloud.r-project.org/')"
+RUN R -e "renv::restore('/packages/R')"
 
 COPY R/BRIDGE /packages/R/BRIDGE
 RUN R -e "devtools::install('/packages/R/BRIDGE')" 
