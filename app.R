@@ -1,10 +1,12 @@
 if (!require(BRIDGE)) {
     library(devtools)
     devtools::document("R/BRIDGE")
-    devtools::install("R/BRIDGE", keep_source = T, upgrade = "never")
-    library(BRIDGE)
+    devtools::install("R/BRIDGE", keep_source = T, upgrade = "never")    
 }
-# library(future)
+print("Loading BRIDGE package")
+library(BRIDGE)
+print("Loaded BRIDGE package")
+
 suppressPackageStartupMessages({
     library(future.callr) # or future for multisession
     library(promises)
@@ -27,44 +29,61 @@ ht_opt$message <- FALSE
 # future::plan(multisession, workers = 4)
 future::plan(future.callr::callr, workers = 4)
 set.seed(42)
-# Function to run the app with a command-line argument for db_path
-bridge <- function() {
-    # Retrieve command-line arguments
+
+print("Getting CLI arguments")
+
+# Determine database path
+get_db_path <- function() {
+    # 1. Try environment variable (for Docker/Shiny Server)
+    db_path <- Sys.getenv("BRIDGE_DB_PATH", unset = NA)
+    if (!is.na(db_path) && file.exists(db_path)) return(db_path)
+    # 2. Try default Docker path
+    if (file.exists("/srv/data/database.db")) return("/srv/data/database.db")
+    # 3. If interactive, prompt user
+    if (interactive()) return(file.choose())
+    # 4. If command line, use first argument
     args <- commandArgs(trailingOnly = TRUE)
-
-    # Handle database path argument for both terminal and interactive use
-    if (interactive()) {
-        if (length(args) == 0) {
-            # Prompt user to select the database file interactively
-            db_path <- file.choose()
-        } else {
-            db_path <- args[1]
-        }
-    } else {
-        if (length(args) == 0) {
-            stop("Please provide the path to the database as an argument.")
-        }
-        db_path <- args[1]
-    }
-
-    # Run the Shiny app, passing db_path to the server function
-    app <- shiny::shinyApp(
-        ui = BRIDGE::ui, # ui retrieved from initial_ui.R
-        server = function(input, output, session) {
-            server_function(input, output, session, db_path) # Function in general_server.R
-        }
-    )
-    if (length(args) > 1) {
-        port <- as.integer(args[2]) # Second argument is the port number
-        if (is.na(port) || port <= 0 || port > 65535) {
-            stop("Error: Invalid port number. Please provide a valid port number between 1 and 65535.")
-        }
-        shiny::runApp(app, port = port) # Run the app on the specified port
-    } else {
-        # If no port is specified, run on the default port (3838)
-        shiny::runApp(app, port = 3838)
-    }
+    if (length(args) > 0 && file.exists(args[1])) return(args[1])
+    stop("No valid database path found.")
 }
+db_path <- get_db_path()
+print(paste("db_path:", db_path))
 
-# Run the app
-bridge()
+get_port <- function() {
+    # 1. Try environment variable (for Docker/Shiny Server)
+    port_env <- Sys.getenv("BRIDGE_PORT", unset = NA)
+    if (!is.na(port_env) && nzchar(port_env)) return(as.integer(port_env))
+    # 2. Try command line argument
+    args <- commandArgs(trailingOnly = TRUE)
+    if (length(args) > 1 && !is.na(as.integer(args[2]))) return(as.integer(args[2]))
+    # 3. Default
+    return(3838L)
+}
+port <- get_port()
+print(paste("port:", port))
+
+
+print("About to define ui and server")
+
+# Define UI and server
+ui <- BRIDGE::ui
+print("UI")
+print(exists("ui"))
+#print(exists("ui", where=asNamespace("BRIDGE")))
+
+server <- function(input, output, session) {
+    BRIDGE::server_function(input, output, session, db_path)
+}
+print("SERVER")
+print(exists("server"))
+
+shiny::runApp(
+    shiny::shinyApp(ui = ui, server = server), port = port
+)
+# Only run the app if not under Shiny Server
+#if (interactive() || (Sys.getenv("RUN_STANDALONE", "0") == "1")) {
+#    shiny::runApp(
+#        shiny::shinyApp(ui = ui, server = server),
+#        port = port
+#    )
+#}

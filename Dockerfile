@@ -7,8 +7,7 @@ RUN apt-get update \
     && apt-get clean \
     && apt-get autoremove -y \
     && apt-get autoclean -y \
-    && apt-get install -y tzdata wget libxml2-dev libglpk-dev libnetcdf-dev perl-base gcc-14 g++-14 \
-    libstdc++-14-dev libc++-dev libc++abi-dev gfortran-14 libgfortran5 libcurl4-openssl-dev libssl-dev
+    && apt-get install -y tzdata wget libxml2-dev libglpk-dev libnetcdf-dev perl-base gcc-14 g++-14 libstdc++-14-dev libc++-dev libc++abi-dev gfortran-14 libgfortran5 libcurl4-openssl-dev libssl-dev liblzma-dev
 
 # Set versions for gcc, g++, and gfortran
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
@@ -36,16 +35,16 @@ RUN chown shiny:shiny /var/lib/shiny-server \
     && rm -rf /srv/shiny-server/* \
     && chown shiny:shiny /srv/shiny-server
 
-ADD --chown=shiny:shiny ./docker/entrypoint.sh /entrypoint.sh
-ADD --chown=shiny:shiny ./app.R /srv/shiny-server/server.R
-#ADD --chown=shiny:shiny ./R/modules /srv/shiny-server/R/modules
-#ADD --chown=shiny:shiny ./R/imports.R /srv/shiny-server/R/imports.R
-#ADD --chown=shiny:shiny ./R/global.R /srv/shiny-server/R/global.R
+ENV BRIDGE_PORT=3838
+ENV BRIDGE_DB_PATH=/srv/data/database.db
 
+ADD --chown=shiny:shiny ./docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+ADD --chown=shiny:shiny ./app.R /srv/shiny-server/bridge.R
 
 EXPOSE 3838
 USER shiny
 
-# CMD R -e 'shiny::runApp("/srv/shiny-server/server.R", port = 3838, host = "0.0.0.0")'
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["R", "-e", "options(shiny.host='0.0.0.0', shiny.port=3838); shiny::runApp('/srv/shiny-server/bridge.R')"]
+# CMD R -e 'shiny::runApp("/srv/shiny-server/bridge.R", port = 3838, host = "0.0.0.0")'
+# ENTRYPOINT ["/entrypoint.sh"]
