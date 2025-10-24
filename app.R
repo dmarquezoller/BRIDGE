@@ -3,9 +3,9 @@ if (!require(BRIDGE)) {
     devtools::document("R/BRIDGE")
     devtools::install("R/BRIDGE", keep_source = T, upgrade = "never")    
 }
-print("Loading BRIDGE package")
+#print("Loading BRIDGE package")
 library(BRIDGE)
-print("Loaded BRIDGE package")
+#print("Loaded BRIDGE package")
 
 suppressPackageStartupMessages({
     library(future.callr) # or future for multisession
@@ -30,7 +30,7 @@ ht_opt$message <- FALSE
 future::plan(future.callr::callr, workers = 4)
 set.seed(42)
 
-print("Getting CLI arguments")
+#print("Getting CLI arguments")
 
 # Determine database path
 get_db_path <- function() {
@@ -47,7 +47,7 @@ get_db_path <- function() {
     stop("No valid database path found.")
 }
 db_path <- get_db_path()
-print(paste("db_path:", db_path))
+#print(paste("db_path:", db_path))
 
 get_port <- function() {
     # 1. Try environment variable (for Docker/Shiny Server)
@@ -60,30 +60,28 @@ get_port <- function() {
     return(3838L)
 }
 port <- get_port()
-print(paste("port:", port))
-
-
-print("About to define ui and server")
+#print(paste("port:", port))
+#print("About to define ui and server")
 
 # Define UI and server
 ui <- BRIDGE::ui
-print("UI")
-print(exists("ui"))
+#print("UI")
+#print(exists("ui"))
 #print(exists("ui", where=asNamespace("BRIDGE")))
 
 server <- function(input, output, session) {
     BRIDGE::server_function(input, output, session, db_path)
 }
-print("SERVER")
-print(exists("server"))
+#print("SERVER")
+#print(exists("server"))
 
-shiny::runApp(
-    shiny::shinyApp(ui = ui, server = server), port = port
-)
+#shiny::runApp(
+#    shiny::shinyApp(ui = ui, server = server), port = port
+#)
 # Only run the app if not under Shiny Server
-#if (interactive() || (Sys.getenv("RUN_STANDALONE", "0") == "1")) {
-#    shiny::runApp(
-#        shiny::shinyApp(ui = ui, server = server),
-#        port = port
-#    )
-#}
+if (interactive() || (Sys.getenv("RUN_STANDALONE", "0") == "1")) {
+    shiny::runApp(
+        shiny::shinyApp(ui = ui, server = server),
+        port = port
+    )
+}
