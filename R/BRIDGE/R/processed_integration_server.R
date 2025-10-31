@@ -202,7 +202,7 @@ processed_integration <- function(input, output, session, rv) {
             mat_flt <- mat[mat$Gene_ID %in% common_ids | mat$XID %in% common_ids, ] 
 
             data <- dplyr::inner_join(mat_flt, dep_flt, by = "Gene_ID", keep=FALSE, suffix=c("",".y")) %>%
-                select(-ends_with(".y"))
+                dplyr::select(-ends_with(".y"))
 
             # Generate unique IDs
             if ("pepG" %in% colnames(data)) {

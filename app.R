@@ -75,13 +75,14 @@ server <- function(input, output, session) {
 #print("SERVER")
 #print(exists("server"))
 
-#shiny::runApp(
-#    shiny::shinyApp(ui = ui, server = server), port = port
-#)
+app <- shiny::shinyApp(ui = ui, server = server)
+
 # Only run the app if not under Shiny Server
 if (interactive() || (Sys.getenv("RUN_STANDALONE", "0") == "1")) {
-    shiny::runApp(
+    app <- shiny::runApp(
         shiny::shinyApp(ui = ui, server = server),
         port = port
     )
 }
+
+app
