@@ -4,6 +4,14 @@
 
 BRIDGE is a user-friendly app that enables scientists to **explore, analyze and integrate multi-omics datasets** (proteomics, phosphoproteomics and RNA-seq) interactively, privately and without the need of programming skills. It supports both **individual** and **integrative** analysis of datasets and generates interactive visualizations such as heatmaps, volcano plots, and time-course. BRIDGE is especially powerful for identifying shared biological signals across different omics layers. 
 
+## Run from container
+Simply run 
+```bash
+docker run -d --rm --name bridge -p 3838:3838 --mount type=bind,src=${YOUR_DATABASE},dst=/srv/data/database.db docker.io/jfallmann/bridge:latest
+```
+replacing ${YOUR_DATABASE} with the full path to a database of your choice.
+You can use the test database ![here](https://github.io/jfallmann/) to get a first impression of the app.
+
 ## Installation
 
 In order to download and start using bridge there are some previous steps to be done, like setting the environment and creating the database.

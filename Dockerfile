@@ -3,12 +3,15 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV SHINY_LOG_STDERR=1
 ENV TZ=UTC
 
-RUN apt-get update \     
-    && apt-get clean \
-    && apt-get autoremove -y \
-    && apt-get autoclean -y \
-    && apt-get install -y tzdata wget libxml2-dev libglpk-dev libnetcdf-dev perl-base gcc-14 g++-14 \
-    libstdc++-14-dev libc++-dev libc++abi-dev gfortran-14 libgfortran5 libcurl4-openssl-dev libssl-dev
+RUN apt update -y\     
+    && apt clean -y\
+    && apt autoremove -y \
+    && apt autoclean -y \
+    && apt update -y \
+    && apt upgrade -y
+RUN rm -rf /var/lib/apt/lists/* \
+    && apt update -y && apt install -y build-essential software-properties-common
+RUN apt install -y tzdata wget libxml2-dev libglpk-dev libnetcdf-dev perl-base gcc-14 g++-14 libstdc++-14-dev libc++-dev libc++abi-dev gfortran-14 libgfortran5 libcurl4-openssl-dev libssl-dev liblzma-dev
 
 # Set versions for gcc, g++, and gfortran
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
@@ -26,8 +29,8 @@ RUN mkdir -p /packages/R \
 COPY renv.lock /packages/R
 
 ENV R_REMOTES_UPGRADE="never"
-RUN	R -e "install.packages('renv', repos = 'https://cloud.r-project.org/')" \
-    && R -e "renv::restore('/packages/R')" 
+RUN R -e "install.packages('renv', repos = 'https://rstudio.r-universe.dev')"
+RUN R -e "renv::restore('/packages/R')"
 
 COPY R/BRIDGE /packages/R/BRIDGE
 RUN R -e "devtools::install('/packages/R/BRIDGE')" 
@@ -36,16 +39,17 @@ RUN chown shiny:shiny /var/lib/shiny-server \
     && rm -rf /srv/shiny-server/* \
     && chown shiny:shiny /srv/shiny-server
 
-ADD --chown=shiny:shiny ./docker/entrypoint.sh /entrypoint.sh
-ADD --chown=shiny:shiny ./app.R /srv/shiny-server/server.R
-#ADD --chown=shiny:shiny ./R/modules /srv/shiny-server/R/modules
-#ADD --chown=shiny:shiny ./R/imports.R /srv/shiny-server/R/imports.R
-#ADD --chown=shiny:shiny ./R/global.R /srv/shiny-server/R/global.R
-
-RUN chmod +x /entrypoint.sh
+ENV BRIDGE_PORT=3838
+ENV BRIDGE_DB_PATH=/srv/data/database.db
+RUN touch /srv/data/database.db && chown -R shiny:shiny /srv/data && chmod -R 775 /srv/data/database.db
+# ADD --chown=shiny:shiny ./docker/entrypoint.sh /entrypoint.sh
+# RUN chmod +x /entrypoint.sh
+ADD --chown=shiny:shiny ./app.R /srv/shiny-server/app.R
 
 EXPOSE 3838
 USER shiny
 
-# CMD R -e 'shiny::runApp("/srv/shiny-server/server.R", port = 3838, host = "0.0.0.0")'
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["R", "-e", "options(shiny.host='0.0.0.0', shiny.port=3838); shiny::runApp('/srv/shiny-server/app.R')"]
+# CMD ["R", "-e", "options(shiny.host='0.0.0.0', shiny.port=3838, shiny.fullstacktrace=TRUE, shiny.trace=TRUE); shiny::runApp('/srv/shiny-server/app.R')"]  # Debug with full stack trace
+# ENTRYPOINT ["/entrypoint.sh"]
+# Build with docker build --network=host -t bridge:latest .
